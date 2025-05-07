@@ -173,8 +173,8 @@ const ChatInterface = () => {
         </div>
       )}
 
-      <div className={`flex-1 flex flex-col bg-white text-black dark:bg-gray-800 dark:text-white shadow-xl ${currentUser && isPanelOpen ? 'rounded-r-lg' : 'rounded-lg'}`}>
-        <div className={`p-3 border-b flex items-center bg-gray-50 dark:bg-gray-700 ${currentUser && isPanelOpen ? 'rounded-tr-lg' : 'rounded-t-lg'}`}>
+      <div className={`flex-1 relative bg-white text-black dark:bg-gray-800 dark:text-white shadow-xl ${currentUser && isPanelOpen ? 'rounded-r-lg' : 'rounded-lg'}`}>
+        <div className={`absolute top-0 left-0 right-0 z-10 p-3 border-b flex items-center bg-gray-50 dark:bg-gray-700 ${currentUser && isPanelOpen ? 'rounded-tr-lg' : 'rounded-t-lg'}`}>
           {currentUser && (
             <button 
               onClick={() => setIsPanelOpen(!isPanelOpen)} 
@@ -187,7 +187,7 @@ const ChatInterface = () => {
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">AI Chat</h2>
         </div>
         
-        <div className="flex-grow p-4 overflow-y-auto bg-gray-100 dark:bg-gray-900">
+        <div className="absolute top-[53px] bottom-[76px] left-0 right-0 overflow-y-auto p-4 bg-gray-100 dark:bg-gray-900">
           <div className="w-full max-w-3xl mx-auto flex flex-col space-y-3">
             {messages.map((msg, index) => (
               <div key={index} className={`flex w-full ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -224,7 +224,7 @@ const ChatInterface = () => {
           </div>
         </div>
         
-        <div className={`p-4 border-t bg-gray-50 dark:bg-gray-700 ${currentUser && isPanelOpen ? 'rounded-br-lg' : 'rounded-b-lg'}`}>
+        <div className={`absolute bottom-0 left-0 right-0 z-10 p-4 border-t bg-gray-50 dark:bg-gray-700 ${currentUser && isPanelOpen ? 'rounded-br-lg' : 'rounded-b-lg'}`}>
           {!currentUser && (
             <p className="text-red-500 text-center mb-2 text-sm">Please log in to use the chat.</p>
           )}
