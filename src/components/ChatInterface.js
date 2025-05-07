@@ -90,12 +90,12 @@ const ChatInterface = () => {
   return (
     <div className="flex h-full w-full bg-gray-200">
       {currentUser && isPanelOpen && (
-        <div className="w-64 bg-gray-800 text-white p-4 flex flex-col rounded-l-lg shadow-xl">
+        <div className="w-64 bg-slate-100 text-slate-800 p-4 flex flex-col rounded-l-lg shadow-xl">
           <div className="flex justify-between items-center mb-5">
             <h2 className="text-lg font-semibold">History</h2>
             <button 
               onClick={() => setIsPanelOpen(false)} 
-              className="text-gray-400 hover:text-white p-1 rounded-md hover:bg-gray-700"
+              className="text-slate-500 hover:text-slate-700 p-1 rounded-md hover:bg-slate-200"
               aria-label="Close history panel"
             >
               <CloseIcon />
@@ -105,7 +105,7 @@ const ChatInterface = () => {
             {dummyConversations.map(convo => (
               <div 
                 key={convo.id} 
-                className="p-2.5 hover:bg-gray-700 rounded-md cursor-pointer text-sm truncate"
+                className="p-2.5 hover:bg-slate-200 rounded-md cursor-pointer text-sm truncate"
                 title={convo.title}
               >
                 {convo.title}
