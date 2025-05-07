@@ -65,7 +65,7 @@ const ChatInterface = () => {
 
     const userMessage = { sender: 'user', text: input };
     setMessages(prevMessages => [...prevMessages, userMessage]);
-    const currentInput = input;
+    const currentInput = input; // Save input for API call, as setInput is async
     setInput('');
     setIsLoading(true);
     setError(null);
@@ -74,15 +74,33 @@ const ChatInterface = () => {
       const response = await sendMessage(currentInput, threadId);
       if (response.success && response.data) {
         setThreadId(response.data.threadId);
-        const botMessages = response.data.messages.map(msg => ({ sender: 'bot', text: msg }));
-        setMessages(prevMessages => [...prevMessages, ...botMessages]);
+        
+        const newBotMessageTextsFromApi = response.data.messages; // Array of strings from API
+
+        setMessages(prevMsgs => {
+          // prevMsgs contains the latest userMessage and all messages before this API response.
+          const botMessagesAlreadyInState = prevMsgs.filter(m => m.sender === 'bot');
+          const existingBotTexts = new Set(botMessagesAlreadyInState.map(m => m.text));
+          
+          const trulyNewTexts = newBotMessageTextsFromApi.filter(text => !existingBotTexts.has(text));
+          
+          const finalBotMessageObjects = trulyNewTexts.map(msg => ({ sender: 'bot', text: msg }));
+
+          if (newBotMessageTextsFromApi.length > 0 && finalBotMessageObjects.length === 0) {
+            console.warn("API returned message(s), but all were apparent duplicates of existing bot messages.", newBotMessageTextsFromApi);
+          }
+          
+          return [...prevMsgs, ...finalBotMessageObjects];
+        });
+
       } else {
         setError(response.message || 'Failed to get a response from the AI.');
-        setMessages(prevMessages => prevMessages.filter(msg => msg !== userMessage));
+        setMessages(prevMsgs => prevMsgs.filter(msg => msg !== userMessage)); // Remove optimistic user message
       }
     } catch (err) {
+      console.error('Error in handleSend:', err);
       setError(err.message || 'An error occurred while sending the message.');
-      setMessages(prevMessages => prevMessages.filter(msg => msg !== userMessage));
+      setMessages(prevMsgs => prevMsgs.filter(msg => msg !== userMessage)); // Remove optimistic user message
     } finally {
       setIsLoading(false);
     }
