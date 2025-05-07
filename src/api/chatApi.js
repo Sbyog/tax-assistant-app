@@ -9,7 +9,7 @@ export const sendMessage = async (userInput, threadId) => {
       throw new Error('User not authenticated');
     }
 
-    const response = await fetch(`${BASE_URL}/api/ai/assistant/chat`, {
+    const response = await fetch(`${BASE_URL}/ai/assistant/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
