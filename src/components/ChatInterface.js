@@ -135,39 +135,41 @@ const ChatInterface = () => {
           <h2 className="text-lg font-semibold text-gray-700">AI Chat</h2>
         </div>
         
-        <div className="flex-grow p-4 overflow-y-auto space-y-3 bg-gray-100">
-          {messages.map((msg, index) => (
-            <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl px-4 py-2.5 rounded-xl shadow-md ${
-                  msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'
-                }`}
-              >
-                {typeof msg.text === 'string' ? msg.text.split('\n').map((line, i) => (
-                  <span key={i}>{line}{i !== msg.text.split('\n').length -1 && <br/>}</span>
-                )) : JSON.stringify(msg.text)}
+        <div className="flex-grow p-4 overflow-y-auto bg-gray-100">
+          <div className="w-full max-w-3xl mx-auto flex flex-col space-y-3">
+            {messages.map((msg, index) => (
+              <div key={index} className={`flex w-full ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl px-4 py-2.5 rounded-xl shadow-md ${
+                    msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800'
+                  }`}
+                >
+                  {typeof msg.text === 'string' ? msg.text.split('\n').map((line, i) => (
+                    <span key={i}>{line}{i !== msg.text.split('\n').length -1 && <br/>}</span>
+                  )) : JSON.stringify(msg.text)}
+                </div>
               </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="max-w-xs px-4 py-2.5 rounded-xl bg-gray-300 text-gray-800 shadow-md animate-pulse">
-                Thinking...
+            ))}
+            {isLoading && (
+              <div className="flex w-full justify-start">
+                <div className="max-w-xs px-4 py-2.5 rounded-xl bg-gray-300 text-gray-800 shadow-md animate-pulse">
+                  Thinking...
+                </div>
               </div>
-            </div>
-          )}
-          {error && (
-            <div className="flex justify-center sticky top-2 z-10">
-              <div className="w-full max-w-md p-3 rounded-lg bg-red-100 text-red-700 border border-red-300 shadow-lg text-sm">
-                <strong>Error:</strong> {error}
+            )}
+            {error && (
+              <div className="flex w-full justify-center">
+                <div className="w-full max-w-md p-3 rounded-lg bg-red-100 text-red-700 border border-red-300 shadow-lg text-sm">
+                  <strong>Error:</strong> {error}
+                </div>
               </div>
-            </div>
-          )}
-          {!currentUser && messages.length === 0 && !isLoading && (
-             <div className="text-center text-gray-500 mt-10 flex flex-col items-center justify-center h-full">
+            )}
+            {!currentUser && messages.length === 0 && !isLoading && (
+              <div className="text-center text-gray-500 mt-10 flex flex-col items-center justify-center">
                 <p className="text-lg">Please log in to start a conversation.</p>
-             </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
         
         <div className={`p-4 border-t bg-gray-50 ${currentUser && isPanelOpen ? 'rounded-br-lg' : 'rounded-b-lg'}`}>
