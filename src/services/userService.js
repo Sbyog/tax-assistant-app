@@ -54,3 +54,42 @@ export const updateUserLastLogin = async (userId) => {
     throw error;
   }
 };
+
+/**
+ * Get user data from Firestore
+ * @param {string} userId - Firebase Auth user ID
+ * @returns {Promise<object|null>} - User data or null if not found
+ */
+export const getUserData = async (userId) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      return userDoc.data();
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error('Error getting user data:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update user's Stripe customer ID
+ * @param {string} userId - Firebase Auth user ID
+ * @param {string} customerId - Stripe customer ID
+ * @returns {Promise<void>}
+ */
+export const updateStripeCustomerId = async (userId, customerId) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, { 
+      stripeCustomerId: customerId 
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error updating stripe customer ID:', error);
+    throw error;
+  }
+};
