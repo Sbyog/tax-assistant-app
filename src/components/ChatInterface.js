@@ -278,7 +278,7 @@ const ChatInterface = ({ isNewUser, user }) => {
             <div className="mb-4 mt-2">
               <button
                 onClick={toggleTheme}
-                className="w-full flex items-center justify-center px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-gray-600 hover:bg-slate-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 dark:focus:ring-gray-500 dark:focus:ring-offset-gray-800"
+                className="w-full flex items-center justify-center px-3 py-2 text-sm rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 dark:focus:ring-gray-500 dark:focus:ring-offset-gray-800 transition-colors duration-150"
               >
                 {theme === 'light' ? 
                   <span className="flex items-center"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor' className='w-5 h-5 mr-2'><path fillRule='evenodd' d='M7.455 2.004a.75.75 0 01.26.77 7 7 0 009.958 7.967.75.75 0 011.067.853A8.5 8.5 0 116.647 1.516a.75.75 0 01.808.488z' clipRule='evenodd' /></svg>Switch to Dark</span> : 
@@ -310,10 +310,10 @@ const ChatInterface = ({ isNewUser, user }) => {
                   <button
                     onClick={handleSubscribe}
                     disabled={subscriptionLoading}
-                    className="w-full mb-3 py-2.5 px-4 rounded-md text-sm font-medium flex items-center justify-center bg-green-500 hover:bg-green-600 text-white transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 shadow-sm disabled:opacity-60"
+                    className="w-full mb-3 py-2.5 px-4 rounded-md text-sm font-medium flex items-center justify-center transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700 focus:ring-slate-500 dark:focus:ring-gray-500 dark:focus:ring-offset-gray-800"
                   >
                     {subscriptionLoading && subscribeError === '' ? (
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-700 dark:text-slate-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
@@ -326,14 +326,14 @@ const ChatInterface = ({ isNewUser, user }) => {
 
             <button
               onClick={handleAccountNavigation}
-              className="w-full mb-3 py-2.5 px-4 rounded-md text-sm font-medium flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm"
+              className="w-full mb-3 py-2.5 px-4 rounded-md text-sm font-medium flex items-center justify-center transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700 focus:ring-slate-500 dark:focus:ring-gray-500 dark:focus:ring-offset-gray-800"
             >
               Account
             </button>
 
             <button
               onClick={handleLogout}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-md text-sm"
+              className="w-full py-2.5 px-4 rounded-md text-sm font-medium flex items-center justify-center transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700 focus:ring-slate-500 dark:focus:ring-gray-500 dark:focus:ring-offset-gray-800"
             >
               Logout
             </button>
