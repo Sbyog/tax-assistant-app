@@ -25,6 +25,7 @@ export const createCheckoutSession = async () => {
       },
       body: JSON.stringify({
         email: currentUser.email,
+        userId: currentUser.uid,
         successUrl: `${window.location.origin}/subscription/success`,
         cancelUrl: `${window.location.origin}/subscription/cancel`,
       })
