@@ -25,7 +25,7 @@ const LoginPage = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
       <div className="bg-white shadow-xl rounded-lg p-8 md:p-12 w-full max-w-md text-center">
         <h1 className="text-3xl md:text-4xl font-bold text-primary mb-6">
-          Welcome to AI Tools App
+          Welcome to AI Assistant
         </h1>
         <p className="text-gray-600 mb-8">
           Please sign in to continue.
@@ -59,9 +59,9 @@ const LoginPage = () => {
           Sign in with Google
         </button>
         
-        <p className="mt-8 text-xs text-gray-500">
+        {/* <p className="mt-8 text-xs text-gray-500">
           &copy; {new Date().getFullYear()} AI Tools App. All rights reserved.
-        </p>
+        </p> */}
       </div>
     </div>
   );

@@ -1,0 +1,12 @@
+Deployment notes:
+
+Before deploying to Google Cloud Run:
+1. Update the .env file to use the production base URL of the API.
+2. Comment out .env in the .gitignore file so that the file is included in the deployment.
+3. Run "gcloud run deploy"
+
+After deploying to Google Cloud Run:
+1. Uncomment .env in the .gitignore file.
+2. Update the .env file to use the local base URL of the API.
+
+
