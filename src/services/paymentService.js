@@ -77,7 +77,7 @@ export const openCustomerPortal = async (customerId) => {
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        customerId: customerId,
+        userId: currentUser.uid,
         returnUrl: `${window.location.origin}/account`,
       })
     });

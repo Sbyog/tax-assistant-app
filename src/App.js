@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import LoginPage from './pages/LoginPage';
 import SubscriptionSuccess from './pages/SubscriptionSuccess';
 import SubscriptionCancel from './pages/SubscriptionCancel';
+import AccountPage from './pages/AccountPage'; // Add this import
 import { auth } from './firebase';
 import { onAuthStateChanged } from "firebase/auth";
 import { checkIfUserExists, createUserInFirestore, updateUserLastLogin } from './services/userService';
@@ -74,6 +75,10 @@ function App() {
         <Route
           path="/subscription/cancel"
           element={currentUser ? <SubscriptionCancel /> : <Navigate to="/login" replace />}
+        />
+        <Route // Add this new route
+          path="/account"
+          element={currentUser ? <AccountPage user={currentUser} /> : <Navigate to="/login" replace />}
         />
       </Routes>
     </Router>

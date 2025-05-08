@@ -82,14 +82,14 @@ export const getUserData = async (userId) => {
  * @param {string} customerId - Stripe customer ID
  * @returns {Promise<void>}
  */
-export const updateStripeCustomerId = async (userId, customerId) => {
-  try {
-    const userRef = doc(db, 'users', userId);
-    await setDoc(userRef, { 
-      stripeCustomerId: customerId 
-    }, { merge: true });
-  } catch (error) {
-    console.error('Error updating stripe customer ID:', error);
-    throw error;
-  }
-};
+// export const updateStripeCustomerId = async (userId, customerId) => {
+//   try {
+//     const userRef = doc(db, 'users', userId);
+//     await setDoc(userRef, { 
+//       stripeCustomerId: customerId 
+//     }, { merge: true });
+//   } catch (error) {
+//     console.error('Error updating stripe customer ID:', error);
+//     throw error;
+//   }
+// };
