@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import LoginPage from './pages/LoginPage';
+import SubscriptionSuccess from './pages/SubscriptionSuccess';
+import SubscriptionCancel from './pages/SubscriptionCancel';
 import { auth } from './firebase';
 import { onAuthStateChanged } from "firebase/auth";
 import { checkIfUserExists, createUserInFirestore, updateUserLastLogin } from './services/userService';
@@ -64,6 +66,14 @@ function App() {
         <Route 
           path="/login" 
           element={!currentUser ? <LoginPage /> : <Navigate to="/" replace />} 
+        />
+        <Route
+          path="/subscription/success"
+          element={currentUser ? <SubscriptionSuccess /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/subscription/cancel"
+          element={currentUser ? <SubscriptionCancel /> : <Navigate to="/login" replace />}
         />
       </Routes>
     </Router>
