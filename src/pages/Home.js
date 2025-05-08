@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ChatInterface from '../components/ChatInterface';
 
 const Home = ({ isNewUser, user }) => {
+  // Restore state variables for welcome message handling
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
 
@@ -13,7 +14,7 @@ const Home = ({ isNewUser, user }) => {
       setWelcomeMessage(`Welcome back, ${user?.displayName || 'friend'}!`);
     }
     
-    // Hide welcome message after 5 seconds
+    // Hide welcome message after 5 seconds (this state can be used by child components)
     const timer = setTimeout(() => {
       setShowWelcome(false);
     }, 5000);
@@ -23,25 +24,14 @@ const Home = ({ isNewUser, user }) => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-800">
-      {showWelcome && (
-        <div className="w-full py-3 text-center shadow-sm bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out">
-          <div className="flex items-center justify-center">
-            {user?.photoURL && (
-              <img 
-                src={user.photoURL} 
-                alt="Profile" 
-                className="h-8 w-8 rounded-full mr-2 border-2 border-blue-400"
-              />
-            )}
-            <h1 className="text-xl font-bold text-gray-700 dark:text-gray-200">
-              {welcomeMessage}
-            </h1>
-          </div>
-        </div>
-      )}
-      
+      {/* Header is kept hidden as requested */}
       <div className="flex-grow w-full">
-        <ChatInterface />
+        <ChatInterface 
+          isNewUser={isNewUser} 
+          user={user} 
+          welcomeMessage={welcomeMessage}
+          showWelcome={showWelcome}
+        />
       </div>
     </div>
   );
