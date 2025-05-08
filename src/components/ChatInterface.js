@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendMessage } from '../api/chatApi';
 import { auth } from '../firebase';
 import { getUserData } from '../services/userService';
 import { createCheckoutSession, checkSubscriptionStatus } from '../services/paymentService';
+import { saveConversation, listConversations, getConversationMessages, deleteConversation } from '../services/historyService';
 
 const MenuIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -90,6 +91,18 @@ const ChatInterface = ({ isNewUser, user }) => {
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscribeError, setSubscribeError] = useState(''); // For subscribe button errors
   const [userData, setUserData] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversationId, setSelectedConversationId] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [isSavingConversation, setIsSavingConversation] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -112,10 +125,15 @@ const ChatInterface = ({ isNewUser, user }) => {
         setIsPanelOpen(false);
         setSubscriptionStatus('unknown');
         setUserData(null);
+        setConversations([]); // Clear conversations on logout
+        setSelectedConversationId(null); // Clear selected conversation
+        setThreadId(null); // Clear threadId
+        setMessages([]); // Clear messages
       } else {
         setIsPanelOpen(true);
         fetchUserData(user.uid);
         checkUserSubscription(user.uid);
+        fetchConversations(); // Fetch conversations on login
       }
     });
     return () => unsubscribe();
@@ -148,6 +166,33 @@ const ChatInterface = ({ isNewUser, user }) => {
       setSubscriptionLoading(false);
     }
   };
+
+  const fetchConversations = async () => {
+    if (!currentUser) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const response = await listConversations();
+      if (response.success) {
+        setConversations(response.data || []);
+      } else {
+        setHistoryError(response.message || 'Failed to load conversations.');
+        setConversations([]);
+      }
+    } catch (err) {
+      console.error('Error fetching conversations:', err);
+      setHistoryError(err.message || 'An error occurred while fetching conversations.');
+      setConversations([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchConversations();
+    }
+  }, [currentUser]);
 
   const handleAccountNavigation = () => {
     navigate('/account');
@@ -197,41 +242,76 @@ const ChatInterface = ({ isNewUser, user }) => {
     }
 
     const userMessage = { sender: 'user', text: input };
-    setMessages(prevMessages => [...prevMessages, userMessage]);
+    // Optimistically update UI with user message
+    setMessages(prevMsgs => [...prevMsgs, userMessage]);
     const currentInput = input;
     setInput('');
     setIsLoading(true);
     setError(null);
 
+    let localThreadId = threadId; 
+
     try {
-      const response = await sendMessage(currentInput, threadId);
+      const response = await sendMessage(currentInput, localThreadId); 
       if (response.success && response.data) {
-        setThreadId(response.data.threadId);
-        
-        const newBotMessageTextsFromApi = response.data.messages;
+        const newThreadId = response.data.threadId;
+        const botMessagesFromApi = response.data.messages.map(msgText => ({ sender: 'bot', text: msgText }));
 
-        setMessages(prevMsgs => {
-          const botMessagesAlreadyInState = prevMsgs.filter(m => m.sender === 'bot');
-          const existingBotTexts = new Set(botMessagesAlreadyInState.map(m => m.text));
-          
-          const trulyNewTexts = newBotMessageTextsFromApi.filter(text => !existingBotTexts.has(text));
-          
-          const finalBotMessageObjects = trulyNewTexts.map(msg => ({ sender: 'bot', text: msg }));
+        if (!localThreadId && newThreadId) { 
+          setThreadId(newThreadId); 
+          localThreadId = newThreadId; 
 
-          if (newBotMessageTextsFromApi.length > 0 && finalBotMessageObjects.length === 0) {
-            console.warn("API returned message(s), but all were apparent duplicates of existing bot messages.", newBotMessageTextsFromApi);
+          if (userMessage && botMessagesFromApi.length > 0) {
+            setIsSavingConversation(true);
+            try {
+              let title = userMessage.text.substring(0, 40);
+              if (userMessage.text.length > 40) title += "...";
+
+              const conversationData = {
+                threadId: newThreadId,
+                title: title, 
+                firstMessagePreview: `User: ${userMessage.text.substring(0, 100)}`,
+                lastMessagePreview: `Assistant: ${botMessagesFromApi[botMessagesFromApi.length - 1].text.substring(0,100)}`,
+                modelUsed: response.data.modelUsed || "gemini-1.5-pro", 
+              };
+              const saveResult = await saveConversation(conversationData);
+              if (saveResult.success) {
+                setConversations(prevConvos => [saveResult.data, ...prevConvos]);
+                setSelectedConversationId(saveResult.data.id);
+                 // Messages are already optimistic + bot response below, no need to reload.
+              } else {
+                console.error("Failed to save conversation:", saveResult.message);
+                setError("Error: Could not save new conversation. " + saveResult.message);
+              }
+            } catch (saveError) {
+              console.error("Error saving conversation:", saveError);
+              setError("Error: Could not save new conversation. " + saveError.message);
+            } finally {
+              setIsSavingConversation(false);
+            }
           }
-          
-          return [...prevMsgs, ...finalBotMessageObjects];
-        });
+        } else if (localThreadId && newThreadId && localThreadId !== newThreadId) {
+          setThreadId(newThreadId);
+          localThreadId = newThreadId;
+          // If an existing conversation suddenly gets a new threadId from the backend,
+          // we might need to update the conversation history entry or treat it as a new branch.
+          // For now, just update the current threadId.
+          // Consider fetching conversations again or updating the specific one if this happens.
+          console.warn("Thread ID changed mid-conversation. Old:", localThreadId, "New:", newThreadId);
+        }
+
+        // Append new bot messages to the existing messages
+        setMessages(prevMsgs => [...prevMsgs, ...botMessagesFromApi]);
 
       } else {
         setError(response.message || 'Failed to get a response from the AI.');
+        // Remove the optimistically added user message if API call failed
         setMessages(prevMsgs => prevMsgs.filter(msg => msg !== userMessage));
       }
     } catch (err) {
       console.error('Error in handleSend:', err);
       setError(err.message || 'An error occurred while sending the message.');
+      // Remove the optimistically added user message if API call failed
       setMessages(prevMsgs => prevMsgs.filter(msg => msg !== userMessage));
     } finally {
       setIsLoading(false);
@@ -247,13 +327,69 @@ const ChatInterface = ({ isNewUser, user }) => {
     });
   };
 
-  const dummyConversations = [
-    { id: 1, title: 'Machine Learning Basics' },
-    { id: 2, title: 'Recipe Ideas for Dinner' },
-    { id: 3, title: 'Planning a Trip to Japan' },
-    { id: 4, title: 'Python Code Debugging Help' },
-    { id: 5, title: 'Understanding React Hooks' },
-  ];
+  const handleNewConversation = () => {
+    setMessages([]);
+    setThreadId(null);
+    setSelectedConversationId(null);
+    setInput('');
+    setError(null);
+  };
+
+  const handleSelectConversation = async (conversation) => {
+    if (selectedConversationId === conversation.id) return; // Avoid reloading if already selected
+
+    setSelectedConversationId(conversation.id);
+    setThreadId(conversation.threadId); // Set the threadId for the selected conversation
+    setIsLoading(true); // Show loading for messages
+    setError(null); // Clear previous errors
+    setMessages([]); // Clear current messages before loading new ones
+
+    try {
+      const response = await getConversationMessages(conversation.id);
+      if (response.success && response.messages) {
+        const formattedMessages = response.messages.map(msg => ({
+          sender: msg.role === 'user' ? 'user' : 'bot',
+          text: msg.content
+        }));
+        setMessages(formattedMessages);
+      } else {
+        setError(response.message || 'Failed to load messages for this conversation.');
+        setMessages([]); // Clear messages on error
+      }
+    } catch (err) {
+      console.error('Error fetching conversation messages:', err);
+      setError(err.message || 'An error occurred while fetching messages.');
+      setMessages([]); // Clear messages on error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteConversation = async (conversationIdToDelete, event) => {
+    event.stopPropagation(); // Prevent handleSelectConversation from firing
+
+    if (!window.confirm("Are you sure you want to delete this conversation?")) {
+      return;
+    }
+
+    setHistoryLoading(true); // Use historyLoading for delete operation as well
+    try {
+      const response = await deleteConversation(conversationIdToDelete);
+      if (response.success) {
+        setConversations(prevConvos => prevConvos.filter(c => c.id !== conversationIdToDelete));
+        if (selectedConversationId === conversationIdToDelete) {
+          handleNewConversation();
+        }
+      } else {
+        setHistoryError(response.message || "Failed to delete conversation.");
+      }
+    } catch (err) {
+      console.error("Error deleting conversation:", err);
+      setHistoryError(err.message || "An error occurred while deleting conversation.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   const toggleTheme = useCallback(() => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
@@ -275,7 +411,17 @@ const ChatInterface = ({ isNewUser, user }) => {
               </button>
             </div>
 
-            <div className="mb-4 mt-2">
+            <button
+              onClick={handleNewConversation}
+              className="w-full flex items-center justify-center px-3 py-2 mb-3 text-sm rounded-md font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-colors duration-150"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              New Chat
+            </button>
+
+            <div className="mb-4 mt-0">
               <button
                 onClick={toggleTheme}
                 className="w-full flex items-center justify-center px-3 py-2 text-sm rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 dark:focus:ring-gray-500 dark:focus:ring-offset-gray-800 transition-colors duration-150"
@@ -287,18 +433,40 @@ const ChatInterface = ({ isNewUser, user }) => {
             </div>
 
             <div className="flex-grow overflow-y-auto mb-4 space-y-1 pr-1">
-              {dummyConversations.map(convo => (
-                <div 
-                  key={convo.id} 
-                  className="p-2.5 hover:bg-slate-200 dark:hover:bg-gray-700 rounded-md cursor-pointer text-sm truncate"
-                  title={convo.title}
-                >
-                  {convo.title}
+              {historyLoading && !conversations.length ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500 dark:border-blue-400 mx-auto mb-2"></div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Loading history...</p>
                 </div>
-              ))}
+              ) : historyError ? (
+                <div className="p-2 text-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900_too_transparent rounded-md">
+                  Error: {historyError}
+                </div>
+              ) : conversations.length === 0 && !historyLoading ? (
+                <p className="text-sm text-slate-500 dark:text-slate-400 px-2 py-4 text-center">No conversations yet.</p>
+              ) : (
+                conversations.map(convo => (
+                  <div
+                    key={convo.id}
+                    onClick={() => handleSelectConversation(convo)}
+                    className={`group relative p-2.5 rounded-md cursor-pointer text-sm truncate ${selectedConversationId === convo.id ? 'bg-slate-300 dark:bg-gray-600' : 'hover:bg-slate-200 dark:hover:bg-gray-700'}`}
+                    title={convo.title}
+                  >
+                    {convo.title}
+                    <button
+                      onClick={(e) => handleDeleteConversation(convo.id, e)}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                      aria-label="Delete conversation"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
 
-            {/* Subscription Status and Actions */}
             {subscriptionLoading && subscriptionStatus === 'unknown' ? (
               <div className="text-center my-3">
                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500 dark:border-blue-400 mx-auto mb-1"></div>
@@ -388,13 +556,21 @@ const ChatInterface = ({ isNewUser, user }) => {
                   </div>
                 </div>
               ))}
-              {isLoading && (
+              {isLoading && messages.length === 0 && !selectedConversationId && (
                 <div className="flex w-full justify-start">
                   <div className="max-w-xs px-4 py-2.5 rounded-xl bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-200 shadow-md animate-pulse">
                     Thinking...
                   </div>
                 </div>
               )}
+              {isLoading && (selectedConversationId || messages.length > 0) && (
+                <div className="flex w-full justify-start">
+                  <div className="max-w-xs px-4 py-2.5 rounded-xl bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-200 shadow-md animate-pulse">
+                    Thinking...
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
               {error && (
                 <div className="flex w-full justify-center">
                   <div className="w-full max-w-md p-3 rounded-lg bg-red-100 text-red-700 border border-red-300 shadow-lg text-sm">
@@ -421,16 +597,16 @@ const ChatInterface = ({ isNewUser, user }) => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !isLoading && currentUser && handleSend()}
-                  placeholder={currentUser ? "Type your message..." : "Log in to chat"}
+                  placeholder={currentUser ? (selectedConversationId ? "Reply..." : "Type your message...") : "Log in to chat"}
                   className="flex-grow px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm disabled:bg-gray-100 dark:disabled:bg-gray-800 bg-white dark:bg-gray-700 dark:text-gray-200"
-                  disabled={isLoading || !currentUser}
+                  disabled={isLoading || !currentUser || isSavingConversation}
                 />
                 <button
                   onClick={handleSend}
                   className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-r-md disabled:opacity-50 shadow-sm"
-                  disabled={isLoading || !input.trim() || !currentUser}
+                  disabled={isLoading || !input.trim() || !currentUser || isSavingConversation}
                 >
-                  Send
+                  {isSavingConversation ? 'Saving...' : (isLoading ? 'Sending...' : 'Send')}
                 </button>
               </div>
             </div>
