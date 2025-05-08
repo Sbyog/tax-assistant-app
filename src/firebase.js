@@ -22,6 +22,10 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const messaging = getMessaging(app);
+
+// Initialize Google Auth Provider with custom parameters
 export const googleProvider = new GoogleAuthProvider();
+// Add prompt parameter to always show account selection
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 export default app;
