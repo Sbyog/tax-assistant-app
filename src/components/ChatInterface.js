@@ -730,7 +730,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                     }
                   }}
                   placeholder={currentUser ? (isSubscriptionActive ? (selectedConversationId ? "Reply..." : "Type your message... (Shift+Enter for new line)") : "Subscribe to chat") : "Log in to chat"}
-                  className="flex-grow px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm disabled:bg-gray-100 dark:disabled:bg-gray-800 bg-white dark:bg-gray-700 dark:text-gray-200 resize-none overflow-y-auto"
+                  className="flex-grow px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm disabled:bg-gray-100 dark:disabled:bg-gray-800 bg-white dark:bg-gray-700 dark:text-gray-200 resize-none overflow-y-auto hide-scrollbar"
                   rows="1"
                   style={{ maxHeight: '120px' }}
                   disabled={isLoading || !currentUser || isSavingConversation || !isSubscriptionActive}
