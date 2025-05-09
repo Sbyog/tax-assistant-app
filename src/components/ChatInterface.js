@@ -637,7 +637,7 @@ const ChatInterface = ({ isNewUser, user }) => {
               <div className="text-right text-gray-700 dark:text-gray-200 font-medium animate-fade-in">
                 {user && (
                   <div className="flex items-center">
-                    <span>Welcome back, {user.displayName?.split(' ')[0] || 'friend'}!</span>
+                    <span>Welcome, {user.displayName?.split(' ')[0] || 'friend'}!</span>
                     {/* {user.photoURL && (
                       <img 
                         src={user.photoURL} 
