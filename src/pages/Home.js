@@ -23,9 +23,9 @@ const Home = ({ isNewUser, user }) => {
   }, [isNewUser, user]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-800">
+    <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-800">
       {/* Header is kept hidden as requested */}
-      <div className="flex-grow w-full">
+      <div className="flex-grow w-full flex flex-col">
         <ChatInterface 
           isNewUser={isNewUser} 
           user={user} 

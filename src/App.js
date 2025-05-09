@@ -148,7 +148,7 @@ function App() {
 
   return (
     <Router>
-      <div className="App bg-gray-100 dark:bg-gray-800 min-h-screen">
+      <div className="App bg-gray-100 dark:bg-gray-800 h-full flex flex-col">
         {authError && (
           <div 
             className="fixed top-0 left-0 right-0 bg-red-500 text-white p-3 text-center z-50 shadow-lg"
