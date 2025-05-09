@@ -669,14 +669,20 @@ const ChatInterface = ({ isNewUser, user }) => {
               <p className="text-red-500 text-center mb-2 text-sm">Please log in to use the chat.</p>
             )}
             <div className="max-w-3xl mx-auto w-full">
-              <div className="flex items-center">
-                <input
-                  type="text"
+              <div className="flex items-end">
+                <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !isLoading && currentUser && handleSend()}
-                  placeholder={currentUser ? (selectedConversationId ? "Reply..." : "Type your message...") : "Log in to chat"}
-                  className="flex-grow px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm disabled:bg-gray-100 dark:disabled:bg-gray-800 bg-white dark:bg-gray-700 dark:text-gray-200"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !isLoading && currentUser) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder={currentUser ? (selectedConversationId ? "Reply..." : "Type your message... (Shift+Enter for new line)") : "Log in to chat"}
+                  className="flex-grow px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm disabled:bg-gray-100 dark:disabled:bg-gray-800 bg-white dark:bg-gray-700 dark:text-gray-200 resize-none overflow-y-auto"
+                  rows="1"
+                  style={{ maxHeight: '120px' }}
                   disabled={isLoading || !currentUser || isSavingConversation}
                 />
                 <button
