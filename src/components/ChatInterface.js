@@ -258,13 +258,36 @@ const ChatInterface = ({ isNewUser, user }) => {
       const response = await sendMessage(currentInput, localThreadId); 
       if (response.success && response.data) {
         const newThreadId = response.data.threadId;
-        const botMessagesFromApi = response.data.messages.map(msgText => ({ sender: 'bot', text: msgText }));
+        // Assuming response.data.messages are ALL bot messages in the thread so far, as strings
+        const allBotTextsFromApi = response.data.messages || [];
+
+        setMessages(prevMsgs => {
+          // prevMsgs contains [..., previousBotMessages, latestUserMessage]
+          const existingBotTextsInState = new Set(
+            prevMsgs.filter(m => m.sender === 'bot').map(m => m.text)
+          );
+
+          const trulyNewBotTexts = allBotTextsFromApi.filter(
+            text => !existingBotTextsInState.has(text)
+          );
+          
+          const newBotMessageObjects = trulyNewBotTexts.map(text => ({
+            sender: 'bot',
+            text: text,
+            id: `bot-${Date.now()}-${Math.random()}` // Add a temporary unique ID for rendering
+          }));
+
+          return [...prevMsgs, ...newBotMessageObjects];
+        });
 
         if (!localThreadId && newThreadId) { 
           setThreadId(newThreadId); 
           localThreadId = newThreadId; 
 
-          if (userMessage && botMessagesFromApi.length > 0) {
+          // Save conversation logic
+          // userMessage is from the outer scope of handleSend
+          // allBotTextsFromApi contains all bot message strings from the current API response
+          if (userMessage && allBotTextsFromApi.length > 0) {
             setIsSavingConversation(true);
             try {
               let title = userMessage.text.substring(0, 40);
@@ -274,14 +297,13 @@ const ChatInterface = ({ isNewUser, user }) => {
                 threadId: newThreadId,
                 title: title, 
                 firstMessagePreview: `User: ${userMessage.text.substring(0, 100)}`,
-                lastMessagePreview: `Assistant: ${botMessagesFromApi[botMessagesFromApi.length - 1].text.substring(0,100)}`,
+                lastMessagePreview: `Assistant: ${allBotTextsFromApi[allBotTextsFromApi.length - 1].substring(0,100)}`, // Use last text from API
                 modelUsed: response.data.modelUsed || "gemini-1.5-pro", 
               };
               const saveResult = await saveConversation(conversationData);
               if (saveResult.success) {
                 setConversations(prevConvos => [saveResult.data, ...prevConvos]);
                 setSelectedConversationId(saveResult.data.id);
-                 // Messages are already optimistic + bot response below, no need to reload.
               } else {
                 console.error("Failed to save conversation:", saveResult.message);
                 setError("Error: Could not save new conversation. " + saveResult.message);
@@ -296,19 +318,11 @@ const ChatInterface = ({ isNewUser, user }) => {
         } else if (localThreadId && newThreadId && localThreadId !== newThreadId) {
           setThreadId(newThreadId);
           localThreadId = newThreadId;
-          // If an existing conversation suddenly gets a new threadId from the backend,
-          // we might need to update the conversation history entry or treat it as a new branch.
-          // For now, just update the current threadId.
-          // Consider fetching conversations again or updating the specific one if this happens.
           console.warn("Thread ID changed mid-conversation. Old:", localThreadId, "New:", newThreadId);
         }
 
-        // Append new bot messages to the existing messages
-        setMessages(prevMsgs => [...prevMsgs, ...botMessagesFromApi]);
-
       } else {
         setError(response.message || 'Failed to get a response from the AI.');
-        // Remove the optimistically added user message if API call failed
         setMessages(prevMsgs => prevMsgs.filter(msg => msg !== userMessage));
       }
     } catch (err) {
