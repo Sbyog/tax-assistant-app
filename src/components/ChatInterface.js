@@ -638,13 +638,13 @@ const ChatInterface = ({ isNewUser, user }) => {
                 {user && (
                   <div className="flex items-center">
                     <span>Welcome back, {user.displayName?.split(' ')[0] || 'friend'}!</span>
-                    {user.photoURL && (
+                    {/* {user.photoURL && (
                       <img 
                         src={user.photoURL} 
                         alt="Profile" 
                         className="h-6 w-6 rounded-full ml-2 border border-blue-400"
                       />
-                    )}
+                    )} */}
                   </div>
                 )}
               </div>
