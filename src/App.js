@@ -7,7 +7,7 @@ import SubscriptionCancel from './pages/SubscriptionCancel';
 import AccountPage from './pages/AccountPage';
 import SignupModal from './components/SignupModal';
 import { auth } from './firebase';
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, isSignInWithEmailLink, signInWithEmailLink } from "firebase/auth";
 import { checkIfUserExists, createUserInFirestore, updateUserLastLogin } from './services/userService';
 
 // Helper component to manage navigation for post-Stripe signup completion
@@ -32,8 +32,32 @@ function App() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [pendingSignupDetails, setPendingSignupDetails] = useState(null);
   const [isCompletingPostStripeSignup, setIsCompletingPostStripeSignup] = useState(false);
+  const [authError, setAuthError] = useState(null); // For displaying auth errors
 
   useEffect(() => {
+    // Handle sign in with email link
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let email = window.localStorage.getItem('emailForSignIn');
+      if (!email) {
+        email = window.prompt('Please provide your email for confirmation');
+      }
+      if (email) {
+        signInWithEmailLink(auth, email, window.location.href)
+          .then(async (result) => {
+            window.localStorage.removeItem('emailForSignIn');
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setAuthError(null); // Clear any previous auth errors
+          })
+          .catch((error) => {
+            console.error("Error signing in with email link:", error);
+            setAuthError(error.message || "Failed to sign in with email link. The link may be invalid or expired.");
+            window.localStorage.removeItem('emailForSignIn');
+          });
+      } else {
+        setAuthError("Email is required to complete sign-in.");
+      }
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setLoadingAuth(true);
@@ -124,37 +148,53 @@ function App() {
 
   return (
     <Router>
-      <PostStripeSignupHandler isCompleting={isCompletingPostStripeSignup}>
-        {showSignupModal && pendingSignupDetails && (
-          <SignupModal
-            user={pendingSignupDetails}
-            onCancel={handleModalCancel}
-            setPendingSignupDetails={setPendingSignupDetails}
-          />
+      <div className="App bg-gray-100 dark:bg-gray-800 min-h-screen">
+        {authError && (
+          <div 
+            className="fixed top-0 left-0 right-0 bg-red-500 text-white p-3 text-center z-50 shadow-lg"
+            role="alert"
+          >
+            <p>{authError}</p>
+            <button 
+              onClick={() => setAuthError(null)} 
+              className="ml-4 bg-red-700 hover:bg-red-800 text-white font-bold py-1 px-2 rounded text-xs"
+            >
+              Dismiss
+            </button>
+          </div>
         )}
-        <Routes>
-          <Route
-            path="/"
-            element={currentUser && !isCompletingPostStripeSignup ? <Home isNewUser={isNewUser} user={currentUser} /> : (isCompletingPostStripeSignup ? null : <Navigate to="/login" replace />)}
-          />
-          <Route
-            path="/login"
-            element={!currentUser || showSignupModal ? <LoginPage /> : <Navigate to="/" replace />}
-          />
-          <Route
-            path="/subscription/success"
-            element={currentUser ? <SubscriptionSuccess /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/subscription/cancel"
-            element={<SubscriptionCancel />}
-          />
-          <Route
-            path="/account"
-            element={currentUser && !isCompletingPostStripeSignup ? <AccountPage user={currentUser} /> : (isCompletingPostStripeSignup ? null : <Navigate to="/login" replace />)}
-          />
-        </Routes>
-      </PostStripeSignupHandler>
+        <PostStripeSignupHandler isCompleting={isCompletingPostStripeSignup}>
+          {showSignupModal && pendingSignupDetails && (
+            <SignupModal
+              user={pendingSignupDetails}
+              onCancel={handleModalCancel}
+              setPendingSignupDetails={setPendingSignupDetails}
+            />
+          )}
+          <Routes>
+            <Route
+              path="/"
+              element={currentUser && !isCompletingPostStripeSignup ? <Home isNewUser={isNewUser} user={currentUser} /> : (isCompletingPostStripeSignup ? null : <Navigate to="/login" replace />)}
+            />
+            <Route
+              path="/login"
+              element={!currentUser || showSignupModal ? <LoginPage /> : <Navigate to="/" replace />}
+            />
+            <Route
+              path="/subscription/success"
+              element={currentUser ? <SubscriptionSuccess /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/subscription/cancel"
+              element={<SubscriptionCancel />}
+            />
+            <Route
+              path="/account"
+              element={currentUser && !isCompletingPostStripeSignup ? <AccountPage user={currentUser} /> : (isCompletingPostStripeSignup ? null : <Navigate to="/login" replace />)}
+            />
+          </Routes>
+        </PostStripeSignupHandler>
+      </div>
     </Router>
   );
 }

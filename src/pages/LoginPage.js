@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth, googleProvider } from '../firebase';
-import { signInWithPopup } from "firebase/auth";
+import { signInWithPopup, sendSignInLinkToEmail } from "firebase/auth";
 
 const LoginPage = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -21,13 +24,46 @@ const LoginPage = () => {
     }
   };
 
+  const handleEmailLinkSignIn = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setError("Please enter your email address.");
+      return;
+    }
+    setIsEmailLoading(true);
+    setError(null);
+    setEmailSent(false);
+
+    const actionCodeSettings = {
+      // URL you want to redirect back to. The domain (www.example.com) for this
+      // URL must be whitelisted in the Firebase Console.
+      url: window.location.origin, // Or your specific app URL
+      handleCodeInApp: true, // This must be true.
+    };
+
+    try {
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      // Save the email locally so you don't need to ask the user for it again
+      // if they open the link on the same device.
+      window.localStorage.setItem('emailForSignIn', email);
+      setEmailSent(true);
+      setError(null);
+    } catch (err) {
+      console.error("Email Link Sign-In Error:", err);
+      setError(err.message || 'Failed to send sign-in link. Please try again.');
+      setEmailSent(false);
+    } finally {
+      setIsEmailLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white shadow-xl rounded-lg p-8 md:p-12 w-full max-w-md text-center">
-        <h1 className="text-3xl md:text-4xl font-bold text-primary mb-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 p-4">
+      <div className="bg-white dark:bg-gray-700 shadow-xl rounded-lg p-8 md:p-12 w-full max-w-md text-center">
+        <h1 className="text-3xl md:text-4xl font-bold text-primary mb-6 dark:text-white">
           Welcome to AI Assistant
         </h1>
-        <p className="text-gray-600 mb-8">
+        <p className="text-gray-600 dark:text-gray-300 mb-8">
           Please sign in to continue.
         </p>
         
@@ -35,6 +71,13 @@ const LoginPage = () => {
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
             <strong className="font-bold">Error: </strong>
             <span className="block sm:inline">{error}</span>
+          </div>
+        )}
+
+        {emailSent && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <strong className="font-bold">Success! </strong>
+            <span className="block sm:inline">A sign-in link has been sent to your email address. Please check your inbox.</span>
           </div>
         )}
 
@@ -58,10 +101,47 @@ const LoginPage = () => {
           )}
           Sign in with Google
         </button>
+
+        <div className="my-6 flex items-center">
+          <hr className="flex-grow border-t border-gray-300 dark:border-gray-500"/>
+          <span className="mx-4 text-gray-500 dark:text-gray-400 text-sm">OR</span>
+          <hr className="flex-grow border-t border-gray-300 dark:border-gray-500"/>
+        </div>
+
+        <form onSubmit={handleEmailLinkSignIn}>
+          <div className="mb-4">
+            <label htmlFor="email" className="sr-only">Email address</label>
+            <input
+              type="email"
+              name="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email address"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-600 dark:text-white"
+              required
+              disabled={isEmailLoading}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isEmailLoading || isLoading}
+            className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-50 flex items-center justify-center"
+          >
+            {isEmailLoading ? (
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            )}
+            Sign in with Email Link
+          </button>
+        </form>
         
-        {/* <p className="mt-8 text-xs text-gray-500">
-          &copy; {new Date().getFullYear()} AI Tools App. All rights reserved.
-        </p> */}
       </div>
     </div>
   );
