@@ -19,6 +19,12 @@ const CloseIcon = () => (
   </svg>
 );
 
+const PaperAirplaneIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+    <path d="M3.105 3.105a.75.75 0 01.815-.398l13.587 6.038a.75.75 0 010 1.312L3.92 17.293a.75.75 0 01-1.213-.815L4.35 10 2.707 8.354a.75.75 0 01.815-1.213L6.038 8.75l8.65-8.65a.75.75 0 011.06 1.06L8.75 8.188l1.546 1.546a.75.75 0 01-1.06 1.06L7.188 8.75l-1.707 1.707a.75.75 0 01-1.06-1.06L5.813 8l-2.708-2.707a.75.75 0 010-1.061L4.35 2.707 3.105 3.105z" />
+  </svg>
+);
+
 const WelcomeModal = ({ onClose, user }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -92,7 +98,6 @@ const ChatInterface = ({ isNewUser, user }) => {
   const [trialEndDate, setTrialEndDate] = useState(null); // Added to store trial end date
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscribeError, setSubscribeError] = useState(''); // For subscribe button errors
-  const [userData, setUserData] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -143,52 +148,31 @@ const ChatInterface = ({ isNewUser, user }) => {
     }
   }, [theme]);
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      setCurrentUser(user);
-      setMessages([]);
-      setThreadId(null);
-      setError(null);
-      if (!user) {
-        setSubscriptionStatus('unknown');
-        setTrialEndDate(null);
-        setUserData(null);
-        setConversations([]); // Clear conversations on logout
-        setSelectedConversationId(null); // Clear selected conversation
-        setThreadId(null); // Clear threadId
-        setMessages([]); // Clear messages
-      } else {
-        fetchUserData(user.uid);
-        checkUserSubscription(user.uid);
-        fetchConversations(); // Fetch conversations on login
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const fetchUserData = async (userId) => {
+  // Memoized data fetching functions
+  const fetchUserData = useCallback(async (userId) => {
+    if (!userId) return;
     try {
-      const data = await getUserData(userId);
-      setUserData(data);
+      await getUserData(userId); // Call API, but userData state was removed
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
-  };
+  }, []); // No dependencies as it doesn't set component state directly that it depends on
 
-  const checkUserSubscription = async (userId) => {
+  const checkUserSubscription = useCallback(async (userId) => {
+    if (!userId) return;
     setSubscriptionLoading(true);
-    setSubscribeError(''); // Clear previous subscribe errors
+    setSubscribeError('');
     try {
       const result = await checkSubscriptionStatus(userId);
       if (result.success) {
-        setSubscriptionStatus(result.status); // Store the actual status string
+        setSubscriptionStatus(result.status);
         if (result.status === 'trialing' && result.trialEndDate) {
           setTrialEndDate(result.trialEndDate);
         } else {
           setTrialEndDate(null);
         }
       } else {
-        setSubscriptionStatus('inactive'); // Default to inactive on error
+        setSubscriptionStatus('inactive');
         setTrialEndDate(null);
         console.error('Error checking subscription:', result.error);
       }
@@ -199,10 +183,10 @@ const ChatInterface = ({ isNewUser, user }) => {
     } finally {
       setSubscriptionLoading(false);
     }
-  };
+  }, []); // Removed state setters from deps as they are stable
 
-  const fetchConversations = async () => {
-    if (!currentUser) return;
+  const fetchConversations = useCallback(async () => {
+    if (!currentUser) return; // Relies on currentUser state
     setHistoryLoading(true);
     setHistoryError(null);
     try {
@@ -220,7 +204,32 @@ const ChatInterface = ({ isNewUser, user }) => {
     } finally {
       setHistoryLoading(false);
     }
-  };
+  }, [currentUser]); // Added currentUser as a dependency
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setCurrentUser(user);
+      setMessages([]);
+      setThreadId(null);
+      setError(null);
+      if (!user) {
+        setSubscriptionStatus('unknown');
+        setTrialEndDate(null);
+        setConversations([]); 
+        setSelectedConversationId(null); 
+      }
+    });
+    return () => unsubscribe();
+  }, []); // Removed setters from deps, they are stable
+
+  // Effect to fetch user-specific data when currentUser changes
+  useEffect(() => {
+    if (currentUser && currentUser.uid) {
+      fetchUserData(currentUser.uid);
+      checkUserSubscription(currentUser.uid);
+      fetchConversations();
+    }
+  }, [currentUser, fetchUserData, checkUserSubscription, fetchConversations]);
 
   const calculateDaysLeft = (endDate) => {
     if (!endDate) return null;
@@ -230,12 +239,6 @@ const ChatInterface = ({ isNewUser, user }) => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
-
-  useEffect(() => {
-    if (currentUser) {
-      fetchConversations();
-    }
-  }, [currentUser]);
 
   const handleAccountNavigation = () => {
     navigate('/account');
@@ -868,7 +871,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                 />
                 <button
                   onClick={handleVoiceInputClick}
-                  className={`ml-2 p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white focus:outline-none disabled:opacity-50 ${isRecording ? 'text-red-500 hover:text-red-600' : 'text-green-500 hover:text-green-600'}`}
+                  className={`ml-2 px-1.5 py-2 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none disabled:opacity-50 ${isRecording ? 'text-red-500 hover:text-red-600' : 'text-green-500 hover:text-green-600'}`}
                   disabled={isLoading || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing}
                   title={isRecording ? "Stop recording" : "Start voice input"}
                 >
@@ -878,10 +881,12 @@ const ChatInterface = ({ isNewUser, user }) => {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   ) : isRecording ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    // Stop Icon (Square) with animation
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-pulse" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M5 5h10v10H5V5z" clipRule="evenodd" />
                     </svg>
                   ) : (
+                    // Microphone Icon
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4z" />
                       <path fillRule="evenodd" d="M5.5 8.5A.5.5 0 016 8h8a.5.5 0 010-1.5H6a.5.5 0 01-.5-.5z" clipRule="evenodd" />
@@ -891,10 +896,17 @@ const ChatInterface = ({ isNewUser, user }) => {
                 </button>
                 <button
                   onClick={handleSend}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-md disabled:opacity-50 shadow-sm ml-2"
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-3 py-2.5 rounded-md disabled:opacity-50 shadow-sm ml-2 flex items-center justify-center" // Adjusted padding for icon
                   disabled={isLoading || !input.trim() || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing || isRecording}
                 >
-                  {isSavingConversation ? 'Saving...' : (isLoading || isTranscribing ? '...' : 'Send')}
+                  {isSavingConversation || isLoading || isTranscribing ? (
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <PaperAirplaneIcon />
+                  )}
                 </button>
               </div>
             </div>
