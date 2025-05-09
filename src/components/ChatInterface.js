@@ -105,7 +105,7 @@ const ChatInterface = ({ isNewUser, user }) => {
   // Voice input states
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [audioChunks, setAudioChunks] = useState([]);
+  const audioChunksRef = useRef([]); // Use useRef for synchronous updates to audio chunks
   const [isTranscribing, setIsTranscribing] = useState(false);
 
   // Effect to handle window resize for panel visibility
@@ -503,19 +503,60 @@ const ChatInterface = ({ isNewUser, user }) => {
       return;
     }
     try {
+      console.log("Attempting to get user media...");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' }); // Explicitly set MIME type
-      recorder.ondataavailable = (event) => {
-        setAudioChunks((prev) => [...prev, event.data]);
+      console.log("User media stream obtained:", stream);
+
+      const mimeType = 'audio/webm';
+      const isSupported = MediaRecorder.isTypeSupported(mimeType);
+      console.log(`MIME type ${mimeType} supported: ${isSupported}`);
+      if (!isSupported) {
+        setError(`Audio format ${mimeType} is not supported by your browser.`);
+        stream.getTracks().forEach(track => track.stop()); // Stop stream if format not supported
+        return;
+      }
+
+      audioChunksRef.current = []; // Clear any previous chunks before starting
+      const recorder = new MediaRecorder(stream, { mimeType: mimeType });
+      console.log("MediaRecorder instance created:", recorder);
+
+      recorder.onstart = () => {
+        console.log("Recording started. Recorder state:", recorder.state);
       };
+
+      recorder.ondataavailable = (event) => {
+        console.log("ondataavailable event fired. Data size:", event.data.size);
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data); // Push directly to ref's current value
+          console.log("Audio chunk pushed. Total chunks in ref:", audioChunksRef.current.length);
+        } else {
+          console.log("Received empty audio chunk.");
+        }
+      };
+
       recorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        setAudioChunks([]);
+        console.log("Recording stopped. Recorder state:", recorder.state);
+        console.log("Current audio chunks count in ref before blob creation:", audioChunksRef.current.length);
+
+        const currentAudioChunks = audioChunksRef.current; // Capture current chunks
+        audioChunksRef.current = []; // Clear chunks immediately for next recording
+
+        if (currentAudioChunks.length === 0) {
+          console.warn("No audio chunks were collected before onstop.");
+          stream.getTracks().forEach(track => track.stop());
+          setIsRecording(false);
+          // setError("No audio was recorded. Please try again."); // Optional: notify user
+          return;
+        }
+
+        const audioBlob = new Blob(currentAudioChunks, { type: mimeType });
+        console.log("AudioBlob created. Size:", audioBlob.size, "Type:", audioBlob.type);
+
         if (audioBlob.size > 0) {
           setIsTranscribing(true);
           setError(null);
           try {
-            const transcribedText = await transcribeAudio(audioBlob); // Use the imported function
+            const transcribedText = await transcribeAudio(audioBlob);
             if (transcribedText) {
               setInput(prevInput => prevInput ? prevInput + ' ' + transcribedText : transcribedText);
             } else {
@@ -528,24 +569,58 @@ const ChatInterface = ({ isNewUser, user }) => {
             setIsTranscribing(false);
           }
         } else {
-          console.log("No audio data recorded.");
+          console.warn("No audio data recorded to blob, or blob is empty (though chunks were present).");
         }
-        // Stop microphone tracks
         stream.getTracks().forEach(track => track.stop());
+        console.log("Microphone tracks stopped.");
+        setIsRecording(false); // Ensure UI updates correctly after stopping
       };
+
+      recorder.onerror = (event) => {
+        console.error("MediaRecorder error:", event.error);
+        setError(`Recording error: ${event.error.name} - ${event.error.message}`);
+        setIsRecording(false);
+        audioChunksRef.current = []; // Clear chunks on error too
+        if (stream && stream.getTracks) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
+
       recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
+      console.log("MediaRecorder.start() called. Recorder state should be 'recording'.");
+
     } catch (err) {
-      console.error('Error accessing microphone:', err);
-      setError('Microphone access denied or not available. Please check permissions.');
+      console.error('Error accessing microphone or starting recording:', err);
+      let errorMessage = 'Microphone access denied or not available. Please check permissions.';
+      if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage = 'No microphone found. Please ensure a microphone is connected and enabled.';
+      } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMessage = 'Microphone permission denied. Please allow microphone access in your browser settings for this site.';
+      } else if (err.name === 'NotReadableError') {
+        errorMessage = 'Microphone is already in use or not readable. Please check if another application is using it.';
+      }
+      setError(errorMessage);
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorder) {
+    console.log("stopRecording called. Current mediaRecorder state:", mediaRecorder?.state);
+    if (mediaRecorder && mediaRecorder.state === "recording") { 
       mediaRecorder.stop();
-      setIsRecording(false);
+      console.log("MediaRecorder.stop() called.");
+      // setIsRecording(false); // Moved to onstop/onerror to ensure it happens after all processing
+    } else if (mediaRecorder && mediaRecorder.state === "inactive") {
+      console.log("Recorder was already inactive.");
+      if (isRecording) setIsRecording(false);
+      if (mediaRecorder.stream && mediaRecorder.stream.getTracks) {
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        console.log("Ensured microphone tracks stopped for inactive recorder.");
+      }
+    } else {
+      console.warn("stopRecording called but no active mediaRecorder or recorder not in 'recording' state.");
+      if (isRecording) setIsRecording(false);
     }
   };
 
@@ -815,7 +890,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                     // Microphone Icon
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4z" />
-                      <path fillRule="evenodd" d="M5.5 8.5A.5.5 0 016 8h8a.5.5 0 010 1H6a.5.5 0 01-.5-.5z" clipRule="evenodd" />
+                      <path fillRule="evenodd" d="M5.5 8.5A.5.5 0 016 8h8a.5.5 0 010-1H6a.5.5 0 01-.5-.5z" clipRule="evenodd" />
                       <path fillRule="evenodd" d="M10 18a7 7 0 007-7h-1.558a5.5 5.5 0 01-10.884 0H3a7 7 0 007 7z" clipRule="evenodd" />
                     </svg>
                   )}
