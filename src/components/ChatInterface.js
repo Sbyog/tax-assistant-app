@@ -88,6 +88,7 @@ const ChatInterface = ({ isNewUser, user }) => {
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState('unknown'); // 'unknown', 'active', 'inactive', 'trialing', 'past_due', etc.
+  const [trialEndDate, setTrialEndDate] = useState(null); // Added to store trial end date
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscribeError, setSubscribeError] = useState(''); // For subscribe button errors
   const [userData, setUserData] = useState(null);
@@ -130,6 +131,7 @@ const ChatInterface = ({ isNewUser, user }) => {
       if (!user) {
         setIsPanelOpen(false);
         setSubscriptionStatus('unknown');
+        setTrialEndDate(null);
         setUserData(null);
         setConversations([]); // Clear conversations on logout
         setSelectedConversationId(null); // Clear selected conversation
@@ -161,13 +163,20 @@ const ChatInterface = ({ isNewUser, user }) => {
       const result = await checkSubscriptionStatus(userId);
       if (result.success) {
         setSubscriptionStatus(result.status); // Store the actual status string
+        if (result.status === 'trialing' && result.trialEndDate) {
+          setTrialEndDate(result.trialEndDate);
+        } else {
+          setTrialEndDate(null);
+        }
       } else {
         setSubscriptionStatus('inactive'); // Default to inactive on error
+        setTrialEndDate(null);
         console.error('Error checking subscription:', result.error);
       }
     } catch (error) {
       console.error('Error checking subscription:', error);
       setSubscriptionStatus('inactive');
+      setTrialEndDate(null);
     } finally {
       setSubscriptionLoading(false);
     }
@@ -192,6 +201,15 @@ const ChatInterface = ({ isNewUser, user }) => {
     } finally {
       setHistoryLoading(false);
     }
+  };
+
+  const calculateDaysLeft = (endDate) => {
+    if (!endDate) return null;
+    const end = new Date(endDate);
+    const now = new Date();
+    const diffTime = Math.max(end - now, 0); // Ensure no negative days
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
   };
 
   useEffect(() => {
@@ -465,7 +483,7 @@ const ChatInterface = ({ isNewUser, user }) => {
         {currentUser && isPanelOpen && (
           <div className="w-64 bg-slate-100 text-slate-800 dark:bg-gray-800 dark:text-slate-200 p-4 flex flex-col rounded-l-lg shadow-xl">
             <div className="flex justify-between items-center mb-1">
-              <h2 className="text-lg font-semibold">History</h2>
+              {/* <h2 className="text-lg font-semibold">History</h2> */}
               <button 
                 onClick={() => setIsPanelOpen(false)} 
                 className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-md hover:bg-slate-200 dark:hover:bg-gray-700"
@@ -478,24 +496,13 @@ const ChatInterface = ({ isNewUser, user }) => {
             <button
               onClick={handleNewConversation}
               disabled={!isSubscriptionActive} // Disable if subscription not active
-              className="w-full flex items-center justify-center px-3 py-2 mb-3 text-sm rounded-md font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center px-3 py-2 mt-4 mb-3 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-500 focus:outline-none transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
               New Chat
             </button>
-
-            <div className="mb-4 mt-0">
-              <button
-                onClick={toggleTheme}
-                className="w-full flex items-center justify-center px-3 py-2 text-sm rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 dark:focus:ring-gray-500 dark:focus:ring-offset-gray-800 transition-colors duration-150"
-              >
-                {theme === 'light' ? 
-                  <span className="flex items-center"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor' className='w-5 h-5 mr-2'><path fillRule='evenodd' d='M7.455 2.004a.75.75 0 01.26.77 7 7 0 009.958 7.967.75.75 0 011.067.853A8.5 8.5 0 116.647 1.516a.75.75 0 01.808.488z' clipRule='evenodd' /></svg>Switch to Dark</span> : 
-                  <span className="flex items-center"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor' className='w-5 h-5 mr-2'><path d='M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 14.596a.75.75 0 101.06-1.06l1.06 1.06a.75.75 0 00-1.06 1.06l-1.06-1.06zM5.404 5.404a.75.75 0 101.06-1.06l1.06 1.06a.75.75 0 00-1.06 1.06l-1.06-1.06z' /></svg>Switch to Light</span>}
-              </button>
-            </div>
 
             <div className="flex-grow overflow-y-auto mb-4 space-y-1 pr-1">
               {historyLoading && !conversations.length ? (
@@ -563,12 +570,32 @@ const ChatInterface = ({ isNewUser, user }) => {
               </>
             )}
 
+            {/* Display trial days left */} 
+            {subscriptionStatus === 'trialing' && trialEndDate && (
+              <div className="my-3 px-1 text-center">
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-normal">
+                  {calculateDaysLeft(trialEndDate)} days left in free trial
+                </p>
+              </div>
+            )}
+
             <button
               onClick={handleAccountNavigation}
               className="w-full mb-3 py-2.5 px-4 rounded-md text-sm font-medium flex items-center justify-center transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700 focus:ring-slate-500 dark:focus:ring-gray-500 dark:focus:ring-offset-gray-800"
             >
               Account
             </button>
+
+            <div className="mb-3 mt-0">
+              <button
+                onClick={toggleTheme}
+                className="w-full flex items-center justify-center px-3 py-2.5 text-sm rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 dark:focus:ring-gray-500 dark:focus:ring-offset-gray-800 transition-colors duration-150"
+              >
+                {theme === 'light' ? 
+                  <span className="flex items-center"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor' className='w-5 h-5 mr-2'><path fillRule='evenodd' d='M7.455 2.004a.75.75 0 01.26.77 7 7 0 009.958 7.967.75.75 0 011.067.853A8.5 8.5 0 116.647 1.516a.75.75 0 01.808.488z' clipRule='evenodd' /></svg>Switch to Dark</span> : 
+                  <span className="flex items-center"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor' className='w-5 h-5 mr-2'><path d='M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 14.596a.75.75 0 101.06-1.06l1.06 1.06a.75.75 0 00-1.06 1.06l-1.06-1.06zM5.404 5.404a.75.75 0 101.06-1.06l1.06 1.06a.75.75 0 00-1.06 1.06l-1.06-1.06z' /></svg>Switch to Light</span>}
+              </button>
+            </div>
 
             <button
               onClick={handleLogout}
