@@ -77,7 +77,7 @@ const ChatInterface = ({ isNewUser, user }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [isPanelOpen, setIsPanelOpen] = useState(window.innerWidth >= 768); // Initialize based on screen width (md breakpoint)
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
       const localTheme = window.localStorage.getItem('theme');
@@ -100,6 +100,20 @@ const ChatInterface = ({ isNewUser, user }) => {
   const [currentMessagesPagination, setCurrentMessagesPagination] = useState({ hasMore: false, nextPageAfter: null, firstIdInBatch: null });
   const messagesEndRef = useRef(null);
   const chatLogRef = useRef(null); // Ref for the scrollable chat log container
+
+  // Effect to handle window resize for panel visibility
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) { // md breakpoint
+        setIsPanelOpen(false);
+      } else {
+        setIsPanelOpen(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Derived state to control UI elements based on subscription
   const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
@@ -129,7 +143,6 @@ const ChatInterface = ({ isNewUser, user }) => {
       setThreadId(null);
       setError(null);
       if (!user) {
-        setIsPanelOpen(false);
         setSubscriptionStatus('unknown');
         setTrialEndDate(null);
         setUserData(null);
@@ -138,7 +151,6 @@ const ChatInterface = ({ isNewUser, user }) => {
         setThreadId(null); // Clear threadId
         setMessages([]); // Clear messages
       } else {
-        setIsPanelOpen(true);
         fetchUserData(user.uid);
         checkUserSubscription(user.uid);
         fetchConversations(); // Fetch conversations on login
