@@ -277,32 +277,34 @@ const ChatInterface = ({ isNewUser, user }) => {
     }
   }, [user, isNewUser]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSend = async (textToSend) => {
+    const currentMessage = typeof textToSend === 'string' ? textToSend : input;
+    if (!currentMessage.trim()) return;
+
     if (!currentUser) {
       setError('You must be logged in to chat.');
       return;
     }
 
-    const userMessage = { sender: 'user', text: input };
-    // Optimistically update UI with user message
+    const userMessage = { sender: 'user', text: currentMessage };
     setMessages(prevMsgs => [...prevMsgs, userMessage]);
-    const currentInput = input;
-    setInput('');
+
+    if (typeof textToSend !== 'string' || textToSend === input) {
+      setInput('');
+    }
+
     setIsLoading(true);
     setError(null);
 
     let localThreadId = threadId; 
 
     try {
-      const response = await sendMessage(currentInput, localThreadId); 
+      const response = await sendMessage(currentMessage, localThreadId); 
       if (response.success && response.data) {
         const newThreadId = response.data.threadId;
-        // Assuming response.data.messages are ALL bot messages in the thread so far, as strings
         const allBotTextsFromApi = response.data.messages || [];
 
         setMessages(prevMsgs => {
-          // prevMsgs contains [..., previousBotMessages, latestUserMessage]
           const existingBotTextsInState = new Set(
             prevMsgs.filter(m => m.sender === 'bot').map(m => m.text)
           );
@@ -314,7 +316,7 @@ const ChatInterface = ({ isNewUser, user }) => {
           const newBotMessageObjects = trulyNewBotTexts.map(text => ({
             sender: 'bot',
             text: text,
-            id: `bot-${Date.now()}-${Math.random()}` // Add a temporary unique ID for rendering
+            id: `bot-${Date.now()}-${Math.random()}`
           }));
 
           return [...prevMsgs, ...newBotMessageObjects];
@@ -324,9 +326,6 @@ const ChatInterface = ({ isNewUser, user }) => {
           setThreadId(newThreadId); 
           localThreadId = newThreadId; 
 
-          // Save conversation logic
-          // userMessage is from the outer scope of handleSend
-          // allBotTextsFromApi contains all bot message strings from the current API response
           if (userMessage && allBotTextsFromApi.length > 0) {
             setIsSavingConversation(true);
             try {
@@ -337,7 +336,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                 threadId: newThreadId,
                 title: title, 
                 firstMessagePreview: `User: ${userMessage.text.substring(0, 100)}`,
-                lastMessagePreview: `Assistant: ${allBotTextsFromApi[allBotTextsFromApi.length - 1].substring(0,100)}`, // Use last text from API
+                lastMessagePreview: `Assistant: ${allBotTextsFromApi[allBotTextsFromApi.length - 1].substring(0,100)}`,
                 modelUsed: response.data.modelUsed || "gemini-1.5-pro", 
               };
               const saveResult = await saveConversation(conversationData);
@@ -368,7 +367,6 @@ const ChatInterface = ({ isNewUser, user }) => {
     } catch (err) {
       console.error('Error in handleSend:', err);
       setError(err.message || 'An error occurred while sending the message.');
-      // Remove the optimistically added user message if API call failed
       setMessages(prevMsgs => prevMsgs.filter(msg => msg !== userMessage));
     } finally {
       setIsLoading(false);
@@ -538,14 +536,13 @@ const ChatInterface = ({ isNewUser, user }) => {
         console.log("Recording stopped. Recorder state:", recorder.state);
         console.log("Current audio chunks count in ref before blob creation:", audioChunksRef.current.length);
 
-        const currentAudioChunks = audioChunksRef.current; // Capture current chunks
-        audioChunksRef.current = []; // Clear chunks immediately for next recording
+        const currentAudioChunks = audioChunksRef.current; 
+        audioChunksRef.current = []; 
 
         if (currentAudioChunks.length === 0) {
           console.warn("No audio chunks were collected before onstop.");
           stream.getTracks().forEach(track => track.stop());
           setIsRecording(false);
-          // setError("No audio was recorded. Please try again."); // Optional: notify user
           return;
         }
 
@@ -558,7 +555,7 @@ const ChatInterface = ({ isNewUser, user }) => {
           try {
             const transcribedText = await transcribeAudio(audioBlob);
             if (transcribedText) {
-              setInput(prevInput => prevInput ? prevInput + ' ' + transcribedText : transcribedText);
+              await handleSend(transcribedText);
             } else {
               setError('Transcription failed or returned empty.');
             }
@@ -573,7 +570,7 @@ const ChatInterface = ({ isNewUser, user }) => {
         }
         stream.getTracks().forEach(track => track.stop());
         console.log("Microphone tracks stopped.");
-        setIsRecording(false); // Ensure UI updates correctly after stopping
+        setIsRecording(false); 
       };
 
       recorder.onerror = (event) => {
@@ -610,7 +607,6 @@ const ChatInterface = ({ isNewUser, user }) => {
     if (mediaRecorder && mediaRecorder.state === "recording") { 
       mediaRecorder.stop();
       console.log("MediaRecorder.stop() called.");
-      // setIsRecording(false); // Moved to onstop/onerror to ensure it happens after all processing
     } else if (mediaRecorder && mediaRecorder.state === "inactive") {
       console.log("Recorder was already inactive.");
       if (isRecording) setIsRecording(false);
@@ -872,7 +868,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                 />
                 <button
                   onClick={handleVoiceInputClick}
-                  className={`p-2.5 rounded-md ml-2 ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white font-semibold disabled:opacity-50 shadow-sm`}
+                  className={`ml-2 p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white focus:outline-none disabled:opacity-50 ${isRecording ? 'text-red-500 hover:text-red-600' : 'text-green-500 hover:text-green-600'}`}
                   disabled={isLoading || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing}
                   title={isRecording ? "Stop recording" : "Start voice input"}
                 >
@@ -882,22 +878,20 @@ const ChatInterface = ({ isNewUser, user }) => {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   ) : isRecording ? (
-                    // Stop Icon (Square)
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M5 5h10v10H5V5z" clipRule="evenodd" />
                     </svg>
                   ) : (
-                    // Microphone Icon
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4z" />
-                      <path fillRule="evenodd" d="M5.5 8.5A.5.5 0 016 8h8a.5.5 0 010-1H6a.5.5 0 01-.5-.5z" clipRule="evenodd" />
+                      <path fillRule="evenodd" d="M5.5 8.5A.5.5 0 016 8h8a.5.5 0 010-1.5H6a.5.5 0 01-.5-.5z" clipRule="evenodd" />
                       <path fillRule="evenodd" d="M10 18a7 7 0 007-7h-1.558a5.5 5.5 0 01-10.884 0H3a7 7 0 007 7z" clipRule="evenodd" />
                     </svg>
                   )}
                 </button>
                 <button
                   onClick={handleSend}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-r-md disabled:opacity-50 shadow-sm ml-0.5" // Adjusted ml
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-md disabled:opacity-50 shadow-sm ml-2"
                   disabled={isLoading || !input.trim() || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing || isRecording}
                 >
                   {isSavingConversation ? 'Saving...' : (isLoading || isTranscribing ? '...' : 'Send')}
