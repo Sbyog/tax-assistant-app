@@ -541,8 +541,8 @@ const ChatInterface = ({ isNewUser, user }) => {
               <>
                 {(subscriptionStatus !== 'active' && subscriptionStatus !== 'trialing') && (
                   <div className="my-3 p-3 bg-yellow-100 dark:bg-yellow-700_too_transparent border border-yellow-300 dark:border-yellow-600 rounded-md text-center">
-                    <p className="text-sm text-yellow-700 dark:text-yellow-200 font-medium">Subscription Required</p>
-                    <p className="text-xs text-yellow-600 dark:text-yellow-300 mt-1">
+                    <p className="text-sm text-gray-700 dark:text-gray-500 font-medium">Subscription Required</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-600 mt-1">
                       Please subscribe or ensure your subscription is active to use all features.
                     </p>
                     <button
