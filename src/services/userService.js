@@ -127,12 +127,45 @@ export const getUserData = async (userId) => {
     }
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(errorData.message || `Error getting user data via API: ${response.status}`);
+      console.warn(`Warning getting user data via API: ${response.status}`, errorData.message);
+      return null; 
     }
     return await response.json();
   } catch (error) {
     console.error('Error getting user data via API:', error);
-    throw error;
+    return null; 
+  }
+};
+
+/**
+ * Marks the tutorial as completed for the user via API.
+ * @param {string} userId - Firebase Auth user ID (used for logging, not sent in body)
+ * @returns {Promise<void>}
+ */
+export const markTutorialAsCompleted = async (userId) => {
+  try {
+    const token = await getIdToken();
+    const response = await fetch(`${API_BASE_URL}/auth/users/update`, { // Updated endpoint URL
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ tutorialCompleted: true }), // Correct body
+    });
+
+    const responseData = await response.json(); // Parse JSON response
+
+    if (!response.ok || !responseData.success) {
+      // If response is not OK or backend indicates failure
+      throw new Error(responseData.message || `Error marking tutorial as completed: ${response.status}`);
+    }
+    
+    console.log(responseData.message || 'Tutorial marked as completed for user:', userId);
+  } catch (error) {
+    console.error('Error marking tutorial as completed:', error.message);
+    // We don't re-throw here to avoid breaking the app flow if this minor update fails,
+    // but you might want to add more robust error handling or retry logic.
   }
 };
 
