@@ -36,44 +36,34 @@ function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setLoadingAuth(true); // Set loading true while we check Firestore etc.
+        setLoadingAuth(true);
         try {
+          const storedUid = localStorage.getItem('signupUid');
+          const storedEmail = localStorage.getItem('signupEmail');
+
           const existsInFirestore = await checkIfUserExists(user.uid);
 
-          const storedFirstName = localStorage.getItem('signupFirstName');
-          const storedLastName = localStorage.getItem('signupLastName');
-          const storedEmail = localStorage.getItem('signupEmail');
-          const storedUid = localStorage.getItem('signupUid');
-
           if (!existsInFirestore) {
-            if (storedUid === user.uid && storedFirstName && storedLastName && storedEmail) {
-              // User is authenticated, not in Firestore, but has localStorage details.
-              // This means they are returning from Stripe successfully.
+            if (storedUid === user.uid && storedEmail === user.email) {
               console.log('App.js: User returning from Stripe, setting isCompletingPostStripeSignup to true.');
-              setCurrentUser(user); // Set current user to allow navigation to protected routes like /subscription/success
+              setCurrentUser(user);
               setIsCompletingPostStripeSignup(true);
-              // SubscriptionSuccess page will handle Firestore creation and clearing localStorage.
-              // setLoadingAuth will be set to false by PostStripeSignupHandler or when isCompletingPostStripeSignup is false.
-              // No need to set loadingAuth false here immediately, let the handler/redirect do its job.
             } else {
-              // Standard new user, show the modal to collect names.
               console.log('App.js: New user, showing signup modal.');
               setPendingSignupDetails(user);
               setShowSignupModal(true);
-              setCurrentUser(null); // Don't set full currentUser yet
+              setCurrentUser(null);
               setIsCompletingPostStripeSignup(false);
-              setLoadingAuth(false); // Modal will be shown, auth process for now is paused for this user.
+              setLoadingAuth(false);
             }
           } else {
-            // User exists in Firestore, proceed as normal.
             console.log('App.js: Existing user, proceeding to login.');
             await updateUserLastLogin(user.uid);
-            setIsNewUser(false); // Not a new Firestore user
+            setIsNewUser(false);
             setCurrentUser(user);
             setShowSignupModal(false);
             setPendingSignupDetails(null);
-            setIsCompletingPostStripeSignup(false); // Ensure this is false for existing users
-            // Clear any potentially lingering signup items from localStorage for existing users
+            setIsCompletingPostStripeSignup(false);
             localStorage.removeItem('signupFirstName');
             localStorage.removeItem('signupLastName');
             localStorage.removeItem('signupEmail');
@@ -91,7 +81,6 @@ function App() {
           setLoadingAuth(false);
         }
       } else {
-        // User is signed out
         console.log('App.js: User signed out.');
         setCurrentUser(null);
         setIsNewUser(false);
@@ -103,31 +92,26 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, []); // Removed isCompletingPostStripeSignup from deps, onAuthStateChanged handles all states
+  }, []);
 
   const handleModalCancel = () => {
     setShowSignupModal(false);
     setPendingSignupDetails(null);
-    // auth.signOut() is handled within SignupModal's cancel
-    // onAuthStateChanged will then set loadingAuth to false and currentUser to null.
   };
 
-  // This effect ensures loadingAuth is false if we are not in a special loading state.
   useEffect(() => {
-    if (!isCompletingPostStripeSignup && !showSignupModal && currentUser === null && auth.currentUser === null) {
-      // This case covers when modal is cancelled, user signs out, and we are not waiting for Stripe.
+    if (isCompletingPostStripeSignup && currentUser) {
+      setLoadingAuth(true);
+    } else if (!isCompletingPostStripeSignup && !showSignupModal && !auth.currentUser) {
       setLoadingAuth(false);
     } else if (currentUser && !isCompletingPostStripeSignup) {
-      // User is logged in and not in post-stripe flow.
+      setLoadingAuth(false);
+    } else if (showSignupModal) {
       setLoadingAuth(false);
     }
-    // If isCompletingPostStripeSignup is true, loadingAuth remains true until navigation to success page
-    // or until isCompletingPostStripeSignup becomes false.
-    // If showSignupModal is true, loadingAuth was set false in onAuthStateChanged.
-
   }, [isCompletingPostStripeSignup, showSignupModal, currentUser]);
 
-  if (loadingAuth && !showSignupModal && !isCompletingPostStripeSignup) {
+  if (loadingAuth && !showSignupModal) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800">
         <div className="text-center">

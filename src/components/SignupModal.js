@@ -33,7 +33,8 @@ const SignupModal = ({ user, onCancel, setPendingSignupDetails }) => {
       localStorage.setItem('signupUid', user.uid);
       localStorage.setItem('signupPhotoURL', user.photoURL || '');
 
-      const result = await createCheckoutSession();
+      // Pass firstName and lastName to createCheckoutSession
+      const result = await createCheckoutSession(firstName.trim(), lastName.trim());
       if (result.success && result.url) {
         window.location.href = result.url;
       } else {

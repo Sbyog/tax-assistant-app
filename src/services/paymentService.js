@@ -5,9 +5,11 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
 
 /**
  * Create a checkout session for subscription
+ * @param {string} firstName - User's first name
+ * @param {string} lastName - User's last name
  * @returns {Promise<{success: boolean, url: string, error: string}>} 
  */
-export const createCheckoutSession = async () => {
+export const createCheckoutSession = async (firstName, lastName) => {
   try {
     // Get the user's Firebase token
     const currentUser = auth.currentUser;
@@ -26,6 +28,8 @@ export const createCheckoutSession = async () => {
       body: JSON.stringify({
         email: currentUser.email,
         userId: currentUser.uid,
+        firstName: firstName, // Add firstName
+        lastName: lastName,  // Add lastName
         successUrl: `${window.location.origin}/subscription/success`,
         cancelUrl: `${window.location.origin}/subscription/cancel`,
       })

@@ -1,109 +1,107 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createUserInFirestore, updateUserLastLogin } from '../services/userService'; // Corrected path
-import { checkSubscriptionStatus } from '../services/paymentService'; // Corrected path
-import { auth } from '../firebase'; // Corrected path
+import { checkIfUserExists, updateUserLastLogin } from '../services/userService';
+import { checkSubscriptionStatus } from '../services/paymentService';
+import { auth } from '../firebase';
+
+const POLLING_INTERVAL = 2000; // 2 seconds
+const MAX_POLLS = 5; // Max 5 attempts (10 seconds total)
 
 const SubscriptionSuccess = () => {
   const navigate = useNavigate();
-  const [status, setStatus] = useState('Verifying your subscription...');
+  const [status, setStatus] = useState('Verifying your account and subscription...');
   const [error, setError] = useState(null);
+  const [pollCount, setPollCount] = useState(0);
+
+  const clearLocalStorageSignupDetails = useCallback(() => {
+    localStorage.removeItem('signupFirstName');
+    localStorage.removeItem('signupLastName');
+    localStorage.removeItem('signupEmail');
+    localStorage.removeItem('signupUid');
+    localStorage.removeItem('signupPhotoURL');
+    console.log('Cleared signup details from localStorage.');
+  }, []);
 
   useEffect(() => {
-    const processSubscription = async () => {
-      const firebaseUser = auth.currentUser;
-      const storedFirstName = localStorage.getItem('signupFirstName');
-      const storedLastName = localStorage.getItem('signupLastName');
-      const storedEmail = localStorage.getItem('signupEmail');
-      const storedUid = localStorage.getItem('signupUid');
-      const storedPhotoURL = localStorage.getItem('signupPhotoURL');
+    const firebaseUser = auth.currentUser;
 
-      if (!firebaseUser) {
-        setError('User not authenticated. Please log in.');
-        // Clear local storage as we can't proceed
-        localStorage.removeItem('signupFirstName');
-        localStorage.removeItem('signupLastName');
-        localStorage.removeItem('signupEmail');
-        localStorage.removeItem('signupUid');
-        localStorage.removeItem('signupPhotoURL');
-        setTimeout(() => navigate('/login'), 3000);
-        return;
-      }
+    if (!firebaseUser) {
+      setError('User not authenticated. Please log in.');
+      clearLocalStorageSignupDetails();
+      setTimeout(() => navigate('/login'), 3000);
+      return;
+    }
 
-      // Check if this is a new user completing signup
-      if (storedUid === firebaseUser.uid && storedFirstName && storedLastName && storedEmail) {
-        setStatus('Finalizing your account setup...');
-        try {
-          const userToCreate = {
-            uid: storedUid,
-            email: storedEmail,
-            displayName: `${storedFirstName} ${storedLastName}`.trim(),
-            photoURL: storedPhotoURL || ''
-          };
-          await createUserInFirestore(userToCreate);
-          console.log('User created in Firestore after successful subscription.');
-          
-          // Clear local storage items now that user is created
-          localStorage.removeItem('signupFirstName');
-          localStorage.removeItem('signupLastName');
-          localStorage.removeItem('signupEmail');
-          localStorage.removeItem('signupUid');
-          localStorage.removeItem('signupPhotoURL');
+    const verifyUserAndSubscription = async () => {
+      setStatus('Checking account status...');
+      try {
+        const userExists = await checkIfUserExists(firebaseUser.uid);
 
-          // Now verify subscription status
-          setStatus('Verifying subscription status...');
+        if (userExists) {
+          console.log('User found in Firestore. Proceeding to check subscription.');
+          setStatus('Account verified. Checking subscription status...');
           const subStatus = await checkSubscriptionStatus(firebaseUser.uid);
+
           if (subStatus.success && (subStatus.status === 'active' || subStatus.status === 'trialing')) {
             setStatus('Subscription confirmed! Redirecting to your dashboard...');
-            await updateUserLastLogin(firebaseUser.uid); // Update last login
-            setTimeout(() => navigate('/'), 2000); 
-          } else {
-            setError(`Subscription not active (${subStatus.status}). Please contact support if this is an error.`);
-            // Potentially sign out or offer to go to account page
-            setTimeout(() => navigate('/account'), 4000);
-          }
-        } catch (err) {
-          console.error('Error during post-subscription user creation or check:', err);
-          setError(`Error: ${err.message}. Please contact support.`);
-          // Clear local storage on error to prevent loops
-          localStorage.removeItem('signupFirstName');
-          localStorage.removeItem('signupLastName');
-          localStorage.removeItem('signupEmail');
-          localStorage.removeItem('signupUid');
-          localStorage.removeItem('signupPhotoURL');
-        }
-      } else {
-        // This is likely an existing user who re-subscribed or managed their subscription.
-        // Or, somehow landed here without the signup local storage variables.
-        setStatus('Verifying your subscription status...');
-        try {
-          const subStatus = await checkSubscriptionStatus(firebaseUser.uid);
-          if (subStatus.success && (subStatus.status === 'active' || subStatus.status === 'trialing')) {
-            setStatus('Subscription confirmed! Redirecting...');
-            await updateUserLastLogin(firebaseUser.uid); // Update last login
+            await updateUserLastLogin(firebaseUser.uid);
+            clearLocalStorageSignupDetails();
             setTimeout(() => navigate('/'), 2000);
           } else {
-            setError(`Subscription not active (${subStatus.status}). Please contact support or check your account.`);
-            setTimeout(() => navigate('/account'), 4000);
+            setError(`Subscription not active (${subStatus.status || 'unknown'}). Please contact support if this is an error.`);
+            clearLocalStorageSignupDetails();
+            setTimeout(() => navigate('/account'), 4000); // Or login, depending on desired flow for failed sub check
           }
-        } catch (err) {
-          console.error('Error checking subscription for existing user:', err);
-          setError(`Error: ${err.message}. Please try again or contact support.`);
+        } else {
+          // User does not exist, poll a few times
+          if (pollCount < MAX_POLLS) {
+            setStatus(`Account not yet found. Retrying... (${pollCount + 1}/${MAX_POLLS})`);
+            setPollCount(prev => prev + 1);
+            // setTimeout will be handled by pollCount change re-triggering useEffect
+          } else {
+            setError('Failed to verify your account setup after checkout. Your payment may have succeeded, but account creation failed. Please contact support.');
+            clearLocalStorageSignupDetails();
+            // Sign out user before redirecting to login to ensure a clean state
+            auth.signOut().then(() => {
+                navigate('/login');
+            }).catch(err => {
+                console.error("Error signing out after account verification failure:", err);
+                navigate('/login'); // Still navigate
+            });
+          }
         }
+      } catch (err) {
+        console.error('Error during user/subscription verification:', err);
+        setError(`Error: ${err.message}. Please contact support.`);
+        clearLocalStorageSignupDetails();
+        // Optional: sign out and redirect to login on critical errors
+        auth.signOut().then(() => {
+            navigate('/login');
+        }).catch(signOutErr => {
+            console.error("Error signing out after critical verification error:", signOutErr);
+            navigate('/login');
+        });
       }
     };
 
-    processSubscription();
-  }, [navigate]);
+    // Initial call or if pollCount changes
+    const timerId = setTimeout(verifyUserAndSubscription, pollCount > 0 ? POLLING_INTERVAL : 0);
+
+    return () => clearTimeout(timerId); // Cleanup timer
+
+  }, [navigate, pollCount, clearLocalStorageSignupDetails]); // Effect dependencies
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 p-4">
       <div className="bg-white dark:bg-gray-700 shadow-xl rounded-lg p-8 md:p-12 w-full max-w-md text-center">
-        <h1 className="text-2xl font-bold text-primary mb-6">Subscription Status</h1>
+        <h1 className="text-2xl font-bold text-primary mb-6">Finalizing Setup</h1>
         {error ? (
           <div className="text-red-500 dark:text-red-400 mb-4">
-            <p className="font-semibold">Error:</p>
+            <p className="font-semibold">Verification Error:</p>
             <p>{error}</p>
+            {error.includes("contact support") && 
+              <p className="mt-2 text-sm">You will be redirected to the login page.</p>
+            }
           </div>
         ) : (
           <div className="text-green-600 dark:text-green-400 mb-4">
@@ -114,7 +112,7 @@ const SubscriptionSuccess = () => {
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto my-4"></div>
         )}
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">
-          You will be redirected shortly.
+          Please wait while we complete your setup. You will be redirected shortly.
         </p>
       </div>
     </div>
