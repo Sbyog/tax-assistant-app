@@ -1,64 +1,121 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
+import { useNavigate } from 'react-router-dom';
+import { createUserInFirestore, updateUserLastLogin } from '../services/userService'; // Corrected path
+import { checkSubscriptionStatus } from '../services/paymentService'; // Corrected path
+import { auth } from '../firebase'; // Corrected path
 
 const SubscriptionSuccess = () => {
-  const [countdown, setCountdown] = useState(5);
   const navigate = useNavigate();
+  const [status, setStatus] = useState('Verifying your subscription...');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Check if user is logged in
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      if (!user) {
-        navigate('/login');
+    const processSubscription = async () => {
+      const firebaseUser = auth.currentUser;
+      const storedFirstName = localStorage.getItem('signupFirstName');
+      const storedLastName = localStorage.getItem('signupLastName');
+      const storedEmail = localStorage.getItem('signupEmail');
+      const storedUid = localStorage.getItem('signupUid');
+      const storedPhotoURL = localStorage.getItem('signupPhotoURL');
+
+      if (!firebaseUser) {
+        setError('User not authenticated. Please log in.');
+        // Clear local storage as we can't proceed
+        localStorage.removeItem('signupFirstName');
+        localStorage.removeItem('signupLastName');
+        localStorage.removeItem('signupEmail');
+        localStorage.removeItem('signupUid');
+        localStorage.removeItem('signupPhotoURL');
+        setTimeout(() => navigate('/login'), 3000);
+        return;
       }
-    });
-    
-    // Redirect after countdown
-    const timer = setInterval(() => {
-      setCountdown(prevCount => {
-        if (prevCount <= 1) {
-          clearInterval(timer);
-          navigate('/');
-          return 0;
+
+      // Check if this is a new user completing signup
+      if (storedUid === firebaseUser.uid && storedFirstName && storedLastName && storedEmail) {
+        setStatus('Finalizing your account setup...');
+        try {
+          const userToCreate = {
+            uid: storedUid,
+            email: storedEmail,
+            displayName: `${storedFirstName} ${storedLastName}`.trim(),
+            photoURL: storedPhotoURL || ''
+          };
+          await createUserInFirestore(userToCreate);
+          console.log('User created in Firestore after successful subscription.');
+          
+          // Clear local storage items now that user is created
+          localStorage.removeItem('signupFirstName');
+          localStorage.removeItem('signupLastName');
+          localStorage.removeItem('signupEmail');
+          localStorage.removeItem('signupUid');
+          localStorage.removeItem('signupPhotoURL');
+
+          // Now verify subscription status
+          setStatus('Verifying subscription status...');
+          const subStatus = await checkSubscriptionStatus(firebaseUser.uid);
+          if (subStatus.success && (subStatus.status === 'active' || subStatus.status === 'trialing')) {
+            setStatus('Subscription confirmed! Redirecting to your dashboard...');
+            await updateUserLastLogin(firebaseUser.uid); // Update last login
+            setTimeout(() => navigate('/'), 2000); 
+          } else {
+            setError(`Subscription not active (${subStatus.status}). Please contact support if this is an error.`);
+            // Potentially sign out or offer to go to account page
+            setTimeout(() => navigate('/account'), 4000);
+          }
+        } catch (err) {
+          console.error('Error during post-subscription user creation or check:', err);
+          setError(`Error: ${err.message}. Please contact support.`);
+          // Clear local storage on error to prevent loops
+          localStorage.removeItem('signupFirstName');
+          localStorage.removeItem('signupLastName');
+          localStorage.removeItem('signupEmail');
+          localStorage.removeItem('signupUid');
+          localStorage.removeItem('signupPhotoURL');
         }
-        return prevCount - 1;
-      });
-    }, 1000);
-    
-    return () => {
-      unsubscribe();
-      clearInterval(timer);
+      } else {
+        // This is likely an existing user who re-subscribed or managed their subscription.
+        // Or, somehow landed here without the signup local storage variables.
+        setStatus('Verifying your subscription status...');
+        try {
+          const subStatus = await checkSubscriptionStatus(firebaseUser.uid);
+          if (subStatus.success && (subStatus.status === 'active' || subStatus.status === 'trialing')) {
+            setStatus('Subscription confirmed! Redirecting...');
+            await updateUserLastLogin(firebaseUser.uid); // Update last login
+            setTimeout(() => navigate('/'), 2000);
+          } else {
+            setError(`Subscription not active (${subStatus.status}). Please contact support or check your account.`);
+            setTimeout(() => navigate('/account'), 4000);
+          }
+        } catch (err) {
+          console.error('Error checking subscription for existing user:', err);
+          setError(`Error: ${err.message}. Please try again or contact support.`);
+        }
+      }
     };
+
+    processSubscription();
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 text-center">
-        <div className="mb-6">
-          <svg className="mx-auto h-16 w-16 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        
-        <h1 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
-          Subscription Successful!
-        </h1>
-        
-        <p className="text-gray-600 dark:text-gray-300 mb-8">
-          Thank you for subscribing to our premium service. Your account has been upgraded and you now have access to all premium features.
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 p-4">
+      <div className="bg-white dark:bg-gray-700 shadow-xl rounded-lg p-8 md:p-12 w-full max-w-md text-center">
+        <h1 className="text-2xl font-bold text-primary mb-6">Subscription Status</h1>
+        {error ? (
+          <div className="text-red-500 dark:text-red-400 mb-4">
+            <p className="font-semibold">Error:</p>
+            <p>{error}</p>
+          </div>
+        ) : (
+          <div className="text-green-600 dark:text-green-400 mb-4">
+            <p>{status}</p>
+          </div>
+        )}
+        {!error && (
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto my-4"></div>
+        )}
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">
+          You will be redirected shortly.
         </p>
-        
-        <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-          Redirecting to home page in {countdown} seconds...
-        </p>
-        
-        <Link 
-          to="/" 
-          className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition-all"
-        >
-          Go to Home Now
-        </Link>
       </div>
     </div>
   );

@@ -1,64 +1,40 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 
 const SubscriptionCancel = () => {
-  const [countdown, setCountdown] = useState(5);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is logged in
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      if (!user) {
-        navigate('/login');
-      }
+    // Clear any pending signup details from local storage as the user cancelled
+    localStorage.removeItem('signupFirstName');
+    localStorage.removeItem('signupLastName');
+    localStorage.removeItem('signupEmail');
+    localStorage.removeItem('signupUid');
+    localStorage.removeItem('signupPhotoURL');
+
+    // Sign out the user and redirect to login page
+    auth.signOut().then(() => {
+      console.log('User signed out due to subscription cancellation.');
+      navigate('/login');
+    }).catch(error => {
+      console.error('Error signing out user:', error);
+      // Still navigate to login even if signout fails for some reason
+      navigate('/login');
     });
-    
-    // Redirect after countdown
-    const timer = setInterval(() => {
-      setCountdown(prevCount => {
-        if (prevCount <= 1) {
-          clearInterval(timer);
-          navigate('/');
-          return 0;
-        }
-        return prevCount - 1;
-      });
-    }, 1000);
-    
-    return () => {
-      unsubscribe();
-      clearInterval(timer);
-    };
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 text-center">
-        <div className="mb-6">
-          <svg className="mx-auto h-16 w-16 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        
-        <h1 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
-          Subscription Canceled
-        </h1>
-        
-        <p className="text-gray-600 dark:text-gray-300 mb-8">
-          Your subscription process was canceled. If you encountered any issues or have questions about our premium features, please contact our support team.
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 p-4">
+      <div className="bg-white dark:bg-gray-700 shadow-xl rounded-lg p-8 md:p-12 w-full max-w-md text-center">
+        <h1 className="text-2xl font-bold text-primary mb-4">Subscription Cancelled</h1>
+        <p className="text-gray-600 dark:text-gray-300 mb-6">
+          Your subscription process was cancelled. You are being redirected to the login page.
         </p>
-        
-        <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-          Redirecting to home page in {countdown} seconds...
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto my-4"></div>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">
+          Redirecting...
         </p>
-        
-        <Link 
-          to="/" 
-          className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition-all"
-        >
-          Go to Home Now
-        </Link>
       </div>
     </div>
   );

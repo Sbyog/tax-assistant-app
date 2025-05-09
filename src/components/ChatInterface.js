@@ -100,6 +100,9 @@ const ChatInterface = ({ isNewUser, user }) => {
   const messagesEndRef = useRef(null);
   const chatLogRef = useRef(null); // Ref for the scrollable chat log container
 
+  // Derived state to control UI elements based on subscription
+  const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+
   useEffect(() => {
     // Scroll to bottom only if not loading more, or if it is the very first load of a selected conversation
     if (messagesEndRef.current && (!currentMessagesPagination.nextPageAfter || messages.length <= 20)) {
@@ -474,7 +477,8 @@ const ChatInterface = ({ isNewUser, user }) => {
 
             <button
               onClick={handleNewConversation}
-              className="w-full flex items-center justify-center px-3 py-2 mb-3 text-sm rounded-md font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-colors duration-150"
+              disabled={!isSubscriptionActive} // Disable if subscription not active
+              className="w-full flex items-center justify-center px-3 py-2 mb-3 text-sm rounded-md font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -536,18 +540,24 @@ const ChatInterface = ({ isNewUser, user }) => {
             ) : (
               <>
                 {(subscriptionStatus !== 'active' && subscriptionStatus !== 'trialing') && (
-                  <button
-                    onClick={handleSubscribe}
-                    disabled={subscriptionLoading}
-                    className="w-full mb-3 py-2.5 px-4 rounded-md text-sm font-medium flex items-center justify-center transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700 focus:ring-slate-500 dark:focus:ring-gray-500 dark:focus:ring-offset-gray-800"
-                  >
-                    {subscriptionLoading && subscribeError === '' ? (
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-700 dark:text-slate-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    ) : 'Subscribe Now'}
-                  </button>
+                  <div className="my-3 p-3 bg-yellow-100 dark:bg-yellow-700_too_transparent border border-yellow-300 dark:border-yellow-600 rounded-md text-center">
+                    <p className="text-sm text-yellow-700 dark:text-yellow-200 font-medium">Subscription Required</p>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-300 mt-1">
+                      Please subscribe or ensure your subscription is active to use all features.
+                    </p>
+                    <button
+                      onClick={handleSubscribe}
+                      disabled={subscriptionLoading}
+                      className="mt-2 w-full py-2 px-3 rounded-md text-xs font-medium flex items-center justify-center transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 text-white bg-blue-500 hover:bg-blue-600 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
+                    >
+                      {subscriptionLoading && subscribeError === '' ? (
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : 'Subscribe Now'}
+                    </button>
+                  </div>
                 )}
                 {subscribeError && <p className="text-red-500 dark:text-red-400 text-xs text-center mb-2">{subscribeError}</p>}
               </>
@@ -614,7 +624,8 @@ const ChatInterface = ({ isNewUser, user }) => {
                         handleSelectConversation(currentConvo, true);
                       }
                     }}
-                    className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-sm transition-colors duration-150"
+                    disabled={!isSubscriptionActive} // Disable if subscription not active
+                    className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-sm transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Load Previous Messages
                   </button>
@@ -679,16 +690,16 @@ const ChatInterface = ({ isNewUser, user }) => {
                       handleSend();
                     }
                   }}
-                  placeholder={currentUser ? (selectedConversationId ? "Reply..." : "Type your message... (Shift+Enter for new line)") : "Log in to chat"}
+                  placeholder={currentUser ? (isSubscriptionActive ? (selectedConversationId ? "Reply..." : "Type your message... (Shift+Enter for new line)") : "Subscribe to chat") : "Log in to chat"}
                   className="flex-grow px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm disabled:bg-gray-100 dark:disabled:bg-gray-800 bg-white dark:bg-gray-700 dark:text-gray-200 resize-none overflow-y-auto"
                   rows="1"
                   style={{ maxHeight: '120px' }}
-                  disabled={isLoading || !currentUser || isSavingConversation}
+                  disabled={isLoading || !currentUser || isSavingConversation || !isSubscriptionActive}
                 />
                 <button
                   onClick={handleSend}
                   className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-r-md disabled:opacity-50 shadow-sm"
-                  disabled={isLoading || !input.trim() || !currentUser || isSavingConversation}
+                  disabled={isLoading || !input.trim() || !currentUser || isSavingConversation || !isSubscriptionActive}
                 >
                   {isSavingConversation ? 'Saving...' : (isLoading ? 'Sending...' : 'Send')}
                 </button>
