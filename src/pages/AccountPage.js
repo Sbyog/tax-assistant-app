@@ -7,6 +7,7 @@ import { openCustomerPortal, checkSubscriptionStatus, createCheckoutSession } fr
 const AccountPage = ({ user }) => {
   const [userData, setUserData] = useState(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [trialEndDate, setTrialEndDate] = useState(null); // Added to store trial end date
   const [isLoading, setIsLoading] = useState(false);
   const [isSubscriptionActionLoading, setIsSubscriptionActionLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,14 +24,21 @@ const AccountPage = ({ user }) => {
           const subStatus = await checkSubscriptionStatus(user.uid);
           if (subStatus.success) {
             setSubscriptionStatus(subStatus.status);
+            if (subStatus.status === 'trialing' && subStatus.trialEndDate) {
+              setTrialEndDate(subStatus.trialEndDate);
+            } else {
+              setTrialEndDate(null);
+            }
           } else {
             setError(subStatus.error || 'Failed to fetch subscription status.');
             setSubscriptionStatus('error');
+            setTrialEndDate(null);
           }
         } catch (err) {
           console.error("Error fetching account data:", err);
           setError('Failed to load account details.');
           setSubscriptionStatus('error');
+          setTrialEndDate(null);
         } finally {
           setIsLoading(false);
         }
@@ -38,6 +46,15 @@ const AccountPage = ({ user }) => {
       fetchData();
     }
   }, [user]);
+
+  const calculateDaysLeft = (endDate) => {
+    if (!endDate) return null;
+    const end = new Date(endDate);
+    const now = new Date(); // Current date is 9 May 2025 from context
+    const diffTime = Math.max(end - now, 0); // Ensure no negative days
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
 
   const handleManageSubscription = async () => {
     if (!userData || !userData.stripeCustomerId) {
@@ -138,7 +155,14 @@ const AccountPage = ({ user }) => {
                     subscriptionStatus === 'active' || subscriptionStatus === 'trialing' ? 'text-green-600 dark:text-green-400' : 
                     'text-red-600 dark:text-red-400'
                   }`}>
-                    {isLoading && !subscriptionStatus ? 'Loading status...' : (subscriptionStatus || 'N/A').toUpperCase()}
+                    {isLoading && !subscriptionStatus ? 'Loading status...' : 
+                      subscriptionStatus === 'trialing' ? '14-day free trial' :
+                      (subscriptionStatus || 'N/A').toUpperCase()}
+                    {subscriptionStatus === 'trialing' && trialEndDate && (
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
+                        ({calculateDaysLeft(trialEndDate)} days left)
+                      </span>
+                    )}
                   </p>
                 </div>
 

@@ -114,7 +114,7 @@ export const openCustomerPortal = async (customerId) => {
 /**
  * Check if a user has an active subscription
  * @param {string} uid - Firebase user ID
- * @returns {Promise<{success: boolean, status: string, error: string}>}
+ * @returns {Promise<{success: boolean, status: string, trialEndDate: string, error: string}>}
  */
 export const checkSubscriptionStatus = async (uid) => {
   try {
@@ -137,12 +137,14 @@ export const checkSubscriptionStatus = async (uid) => {
       return {
         success: true,
         status: data.status || 'none',
+        trialEndDate: data.trialEndDate || null, // Add trialEndDate here
         error: null
       };
     } else {
       return {
         success: false,
         status: 'error',
+        trialEndDate: null,
         error: data.error || 'Failed to check subscription status'
       };
     }
@@ -151,6 +153,7 @@ export const checkSubscriptionStatus = async (uid) => {
     return {
       success: false,
       status: 'error',
+      trialEndDate: null,
       error: error.message || 'An unknown error occurred'
     };
   }
