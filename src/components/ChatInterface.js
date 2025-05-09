@@ -1,24 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IoPaperPlaneOutline } from 'react-icons/io5'; // Import the icon
+import { IoPaperPlane } from 'react-icons/io5'; // Import the solid icon
+import { HiMenu, HiX } from 'react-icons/hi'; // Import menu and close icons
 import { sendMessage } from '../api/chatApi';
 import { transcribeAudio } from '../api/speechApi'; // Import the new API function
 import { auth } from '../firebase';
 import { getUserData } from '../services/userService';
 import { createCheckoutSession, checkSubscriptionStatus } from '../services/paymentService';
 import { saveConversation, listConversations, getConversationMessages, deleteConversation } from '../services/historyService';
-
-const MenuIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-  </svg>
-);
-
-const CloseIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
 
 const WelcomeModal = ({ onClose, user }) => {
   return (
@@ -41,9 +30,7 @@ const WelcomeModal = ({ onClose, user }) => {
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <HiX className="w-6 h-6" />
           </button>
         </div>
         
@@ -637,7 +624,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                 className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-md hover:bg-slate-200 dark:hover:bg-gray-700"
                 aria-label="Close history panel"
               >
-                <CloseIcon />
+                <HiX className="w-6 h-6" />
               </button>
             </div>
 
@@ -763,7 +750,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                   className="mr-3 text-gray-600 hover:text-black dark:text-gray-300 dark:hover:text-white p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
                   aria-label={isPanelOpen ? "Close history panel" : "Open history panel"}
                 >
-                  <MenuIcon />
+                  <HiMenu className="w-6 h-6" />
                 </button>
               )}
               <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">AI Chat</h2>
@@ -870,12 +857,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                   disabled={isLoading || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing}
                   title={isRecording ? "Stop recording" : "Start voice input"}
                 >
-                  {isTranscribing ? (
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  ) : isRecording ? (
+                  {isRecording ? (
                     // Stop Icon (Square) with animation
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-pulse" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M5 5h10v10H5V5z" clipRule="evenodd" />
@@ -891,7 +873,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                 </button>
                 <button
                   onClick={handleSend}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-3 py-2.5 rounded-md disabled:opacity-50 shadow-sm ml-2 flex items-center justify-center" // Adjusted padding for icon
+                  className="bg-blue-500 hover:bg-blue-600 text-white p-2.5 rounded-full disabled:opacity-50 shadow-sm ml-2 flex items-center justify-center" // Changed to rounded-full and p-2.5
                   disabled={isLoading || !input.trim() || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing || isRecording}
                 >
                   {isSavingConversation || isLoading || isTranscribing ? (
@@ -900,7 +882,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   ) : (
-                    <IoPaperPlaneOutline className="w-5 h-5" />
+                    <IoPaperPlane className="w-5 h-5" /> // Use solid IoPaperPlane icon
                   )}
                 </button>
               </div>
