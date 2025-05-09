@@ -96,13 +96,16 @@ const ChatInterface = ({ isNewUser, user }) => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState(null);
   const [isSavingConversation, setIsSavingConversation] = useState(false);
+  const [currentMessagesPagination, setCurrentMessagesPagination] = useState({ hasMore: false, nextPageAfter: null, firstIdInBatch: null });
   const messagesEndRef = useRef(null);
+  const chatLogRef = useRef(null); // Ref for the scrollable chat log container
 
   useEffect(() => {
-    if (messagesEndRef.current) {
+    // Scroll to bottom only if not loading more, or if it is the very first load of a selected conversation
+    if (messagesEndRef.current && (!currentMessagesPagination.nextPageAfter || messages.length <= 20)) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, currentMessagesPagination.nextPageAfter]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -335,44 +338,88 @@ const ChatInterface = ({ isNewUser, user }) => {
     setError(null);
   };
 
-  const handleSelectConversation = async (conversation) => {
-    if (selectedConversationId === conversation.id) return; // Avoid reloading if already selected
+  const handleSelectConversation = async (conversation, loadMore = false) => {
+    if (!loadMore && selectedConversationId === conversation.id && messages.length > 0) {
+      return;
+    }
 
-    setSelectedConversationId(conversation.id);
-    setThreadId(conversation.threadId); // Set the threadId for the selected conversation
-    setIsLoading(true); // Show loading for messages
-    setError(null); // Clear previous errors
-    setMessages([]); // Clear current messages before loading new ones
+    setIsLoading(true); 
+    setError(null); 
+
+    const conversationToLoad = conversation || conversations.find(c => c.id === selectedConversationId);
+    if (!conversationToLoad) {
+      setError("Conversation not found.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!loadMore) {
+      setMessages([]); 
+      setSelectedConversationId(conversationToLoad.id);
+      setThreadId(conversationToLoad.threadId); 
+      setCurrentMessagesPagination({ hasMore: false, nextPageAfter: null, firstIdInBatch: null }); 
+    }
 
     try {
-      const response = await getConversationMessages(conversation.id);
+      const options = {
+        limit: 30,
+        order: 'asc',
+        after: loadMore ? currentMessagesPagination.nextPageAfter : null,
+      };
+
+      const response = await getConversationMessages(conversationToLoad.id, options);
+
       if (response.success && response.messages) {
         const formattedMessages = response.messages.map(msg => ({
+          id: msg.id, 
           sender: msg.role === 'user' ? 'user' : 'bot',
-          text: msg.content
-        }));
-        setMessages(formattedMessages);
+          text: msg.content,
+          timestamp: msg.createdAt 
+        })); 
+        
+        setMessages(prevMessages => loadMore ? [...formattedMessages, ...prevMessages] : formattedMessages);
+        
+        if (response.pagination) {
+          setCurrentMessagesPagination({
+            hasMore: response.pagination.hasMore,
+            nextPageAfter: response.pagination.nextPageAfter, 
+            firstIdInBatch: response.pagination.firstIdInBatch
+          });
+        }
+
+        if (loadMore && chatLogRef.current && response.messages.length > 0) {
+          const firstNewMessageId = response.messages[0]?.id;
+          if (firstNewMessageId) {
+            const element = document.getElementById(`msg-${firstNewMessageId}`);
+            if (element) {
+              setTimeout(() => element.scrollIntoView({ behavior: 'auto', block: 'start' }), 0);
+            }
+          }
+        } else if (!loadMore && messagesEndRef.current) {
+          setTimeout(() => messagesEndRef.current.scrollIntoView({ behavior: "smooth" }), 0);
+        }
+
       } else {
         setError(response.message || 'Failed to load messages for this conversation.');
-        setMessages([]); // Clear messages on error
+        if (!loadMore) setMessages([]); 
       }
     } catch (err) {
       console.error('Error fetching conversation messages:', err);
       setError(err.message || 'An error occurred while fetching messages.');
-      setMessages([]); // Clear messages on error
+      if (!loadMore) setMessages([]); 
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteConversation = async (conversationIdToDelete, event) => {
-    event.stopPropagation(); // Prevent handleSelectConversation from firing
+    event.stopPropagation();
 
     if (!window.confirm("Are you sure you want to delete this conversation?")) {
       return;
     }
 
-    setHistoryLoading(true); // Use historyLoading for delete operation as well
+    setHistoryLoading(true);
     try {
       const response = await deleteConversation(conversationIdToDelete);
       if (response.success) {
@@ -541,10 +588,27 @@ const ChatInterface = ({ isNewUser, user }) => {
             )}
           </div>
           
-          <div className="absolute top-[53px] bottom-[76px] left-0 right-0 overflow-y-auto p-4 bg-gray-100 dark:bg-gray-900">
+          <div ref={chatLogRef} className="absolute top-[53px] bottom-[76px] left-0 right-0 overflow-y-auto p-4 bg-gray-100 dark:bg-gray-900 scroll-smooth">
             <div className="w-full max-w-3xl mx-auto flex flex-col space-y-3">
+              {/* Button to load more messages */} 
+              {selectedConversationId && currentMessagesPagination.hasMore && !isLoading && (
+                <div className="flex justify-center my-3">
+                  <button
+                    onClick={() => {
+                      const currentConvo = conversations.find(c => c.id === selectedConversationId);
+                      if (currentConvo) {
+                        handleSelectConversation(currentConvo, true);
+                      }
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-sm transition-colors duration-150"
+                  >
+                    Load Previous Messages
+                  </button>
+                </div>
+              )}
+
               {messages.map((msg, index) => (
-                <div key={index} className={`flex w-full ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div key={msg.id || index} id={`msg-${msg.id}`} className={`flex w-full ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
                     className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl px-4 py-2.5 rounded-xl shadow-md ${
                       msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-200'

@@ -1,4 +1,3 @@
-
 import { auth } from '../firebase';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
@@ -78,18 +77,34 @@ export const listConversations = async (paginationOptions = {}) => {
 /**
  * Retrieve messages for a specific conversation.
  * @param {string} conversationId - The ID of the conversation.
+ * @param {object} [options] - Optional parameters for message retrieval.
+ * @param {number} [options.limit=20] - Number of messages to retrieve.
+ * @param {string} [options.order='desc'] - Order of messages ('asc' or 'desc').
+ * @param {string} [options.after] - Message ID to fetch messages after.
  * @returns {Promise<object>} - The API response.
  */
-export const getConversationMessages = async (conversationId) => {
+export const getConversationMessages = async (conversationId, options = {}) => {
   try {
     const token = await getIdToken();
+    const { limit = 20, order = 'desc', after } = options;
+
+    const requestBody = {
+      conversationId,
+      limit,
+      order,
+    };
+
+    if (after) {
+      requestBody.after = after;
+    }
+
     const response = await fetch(`${API_BASE_URL}/history/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ conversationId }),
+      body: JSON.stringify(requestBody),
     });
     const responseData = await response.json();
     if (!response.ok) {
