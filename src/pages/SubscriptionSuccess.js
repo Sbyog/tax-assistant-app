@@ -7,7 +7,7 @@ import { auth } from '../firebase';
 const POLLING_INTERVAL = 2000; // 2 seconds
 const MAX_POLLS = 5; // Max 5 attempts (10 seconds total)
 
-const SubscriptionSuccess = () => {
+const SubscriptionSuccess = ({ onSuccessShown }) => {
   const navigate = useNavigate();
   const [status, setStatus] = useState('Verifying your account and subscription...');
   const [error, setError] = useState(null);
@@ -46,6 +46,9 @@ const SubscriptionSuccess = () => {
             setStatus('Subscription confirmed! Redirecting to your dashboard...');
             await updateUserLastLogin(firebaseUser.uid);
             clearLocalStorageSignupDetails();
+            if (typeof onSuccessShown === 'function') {
+              onSuccessShown(); // Call the callback
+            }
             setTimeout(() => navigate('/'), 2000);
           } else {
             setError(`Subscription not active (${subStatus.status || 'unknown'}). Please contact support if this is an error.`);
@@ -89,7 +92,7 @@ const SubscriptionSuccess = () => {
 
     return () => clearTimeout(timerId); // Cleanup timer
 
-  }, [navigate, pollCount, clearLocalStorageSignupDetails]); // Effect dependencies
+  }, [navigate, pollCount, clearLocalStorageSignupDetails, onSuccessShown]); // Effect dependencies
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 p-4">

@@ -9,6 +9,8 @@ import SignupModal from './components/SignupModal';
 import { auth } from './firebase';
 import { onAuthStateChanged, isSignInWithEmailLink, signInWithEmailLink } from "firebase/auth";
 import { checkIfUserExists, createUserInFirestore, updateUserLastLogin } from './services/userService';
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from './firebase';
 
 // Helper component to manage navigation for post-Stripe signup completion
 const PostStripeSignupHandler = ({ isCompleting, children }) => {
@@ -28,7 +30,7 @@ const PostStripeSignupHandler = ({ isCompleting, children }) => {
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
-  const [isNewUser, setIsNewUser] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false); // This will now be correctly set
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [pendingSignupDetails, setPendingSignupDetails] = useState(null);
   const [isCompletingPostStripeSignup, setIsCompletingPostStripeSignup] = useState(false);
@@ -47,6 +49,7 @@ function App() {
             window.localStorage.removeItem('emailForSignIn');
             window.history.replaceState({}, document.title, window.location.pathname);
             setAuthError(null); // Clear any previous auth errors
+            // User is signed in, onAuthStateChanged will handle the rest
           })
           .catch((error) => {
             console.error("Error signing in with email link:", error);
@@ -63,41 +66,67 @@ function App() {
         setLoadingAuth(true);
         try {
           const storedUid = localStorage.getItem('signupUid');
-          const storedEmail = localStorage.getItem('signupEmail');
+          // const storedEmail = localStorage.getItem('signupEmail'); // Keep for potential future use if needed
 
           const existsInFirestore = await checkIfUserExists(user.uid);
 
-          if (!existsInFirestore) {
-            if (storedUid === user.uid && storedEmail === user.email) {
-              console.log('App.js: User returning from Stripe, setting isCompletingPostStripeSignup to true.');
+          if (existsInFirestore) {
+            if (storedUid === user.uid) {
+              // User exists in Firestore AND signupUid matches:
+              // This is a user returning from a successful Stripe signup.
+              console.log('App.js: User returning from Stripe, exists in Firestore. Setting as new user for tutorial and redirecting to success page.');
               setCurrentUser(user);
-              setIsCompletingPostStripeSignup(true);
+              setIsNewUser(true); // Treat as new user for tutorial purposes
+              setIsCompletingPostStripeSignup(true); // Redirect to subscription success
+              // Clear localStorage now that we've identified them
+              localStorage.removeItem('signupFirstName');
+              localStorage.removeItem('signupLastName');
+              localStorage.removeItem('signupEmail');
+              localStorage.removeItem('signupUid');
+              localStorage.removeItem('signupPhotoURL');
             } else {
-              console.log('App.js: New user, showing signup modal.');
-              setPendingSignupDetails(user);
-              setShowSignupModal(true);
-              setCurrentUser(null);
+              // User exists in Firestore, but no matching storedUid:
+              // This is a genuinely existing, returning user.
+              console.log('App.js: Existing user, proceeding to login.');
+              await updateUserLastLogin(user.uid);
+              setCurrentUser(user);
+              setIsNewUser(false);
               setIsCompletingPostStripeSignup(false);
-              setLoadingAuth(false);
+              // Clear any potentially stale localStorage items
+              localStorage.removeItem('signupFirstName');
+              localStorage.removeItem('signupLastName');
+              localStorage.removeItem('signupEmail');
+              localStorage.removeItem('signupUid');
+              localStorage.removeItem('signupPhotoURL');
             }
           } else {
-            console.log('App.js: Existing user, proceeding to login.');
-            await updateUserLastLogin(user.uid);
-            setIsNewUser(false);
-            setCurrentUser(user);
-            setShowSignupModal(false);
-            setPendingSignupDetails(null);
-            setIsCompletingPostStripeSignup(false);
-            localStorage.removeItem('signupFirstName');
-            localStorage.removeItem('signupLastName');
-            localStorage.removeItem('signupEmail');
-            localStorage.removeItem('signupUid');
-            localStorage.removeItem('signupPhotoURL');
-            setLoadingAuth(false);
+            // User does NOT exist in Firestore.
+            // This could be a brand new user starting the signup flow,
+            // or someone who completed Firebase auth but didn't finish the Stripe part where the DB record is made.
+            if (storedUid === user.uid) {
+               // This case implies they went to Stripe, but the backend didn't create the user record yet,
+               // or they came back before the webhook processed.
+               // The SubscriptionSuccess page has polling, so we can direct them there.
+               // We'll mark them as new user and let SubscriptionSuccess handle verification.
+              console.log('App.js: User authenticated, not in Firestore, but signupUid matches. Likely post-Stripe, pre-DB record. Setting as new user for tutorial.');
+              setCurrentUser(user);
+              setIsNewUser(true);
+              setIsCompletingPostStripeSignup(true); // Let SubscriptionSuccess page handle polling for DB record
+            } else {
+              // Brand new user, or incomplete previous signup not related to current Stripe flow.
+              console.log('App.js: New user (not in Firestore, no matching signupUid), showing signup modal.');
+              setPendingSignupDetails(user);
+              setShowSignupModal(true);
+              setCurrentUser(null); // Don't set current user until modal is completed
+              setIsNewUser(true); // Will be a new user after modal
+              setIsCompletingPostStripeSignup(false);
+            }
           }
+          setLoadingAuth(false);
         } catch (error) {
           console.error("Error in user check/setup:", error);
-          auth.signOut();
+          setAuthError("Error during user setup: " + error.message);
+          auth.signOut(); // Sign out on error to prevent inconsistent state
           setCurrentUser(null);
           setShowSignupModal(false);
           setPendingSignupDetails(null);
@@ -105,6 +134,7 @@ function App() {
           setLoadingAuth(false);
         }
       } else {
+        // User is signed out
         console.log('App.js: User signed out.');
         setCurrentUser(null);
         setIsNewUser(false);
@@ -112,89 +142,84 @@ function App() {
         setPendingSignupDetails(null);
         setIsCompletingPostStripeSignup(false);
         setLoadingAuth(false);
+        // Optionally clear localStorage here too if it makes sense for your logout flow
+        // localStorage.removeItem('signupUid'); // etc.
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, []); // Empty dependency array: runs once on mount and cleans up on unmount
 
   const handleModalCancel = () => {
     setShowSignupModal(false);
     setPendingSignupDetails(null);
+    // If a user cancels the signup modal, we might want to sign them out
+    // or redirect them, as they are authenticated with Firebase but not fully "signed up" in our app.
+    // For now, just closing modal. Consider auth.signOut() here if appropriate.
+  };
+  
+  const handleSubscriptionSuccessShown = () => {
+    console.log("App.js: SubscriptionSuccess page has been shown, setting isCompletingPostStripeSignup to false.");
+    setIsCompletingPostStripeSignup(false);
   };
 
+  // useEffect for managing loading state based on auth and modal states
   useEffect(() => {
-    if (isCompletingPostStripeSignup && currentUser) {
-      setLoadingAuth(true);
-    } else if (!isCompletingPostStripeSignup && !showSignupModal && !auth.currentUser) {
+    if (auth.currentUser && !isCompletingPostStripeSignup && !showSignupModal) {
       setLoadingAuth(false);
-    } else if (currentUser && !isCompletingPostStripeSignup) {
+    } else if (!auth.currentUser && !showSignupModal && !isSignInWithEmailLink(auth, window.location.href)) {
+      // If no user, not showing modal, and not in email link flow, stop loading.
       setLoadingAuth(false);
-    } else if (showSignupModal) {
-      setLoadingAuth(false);
+    } else if (showSignupModal || isCompletingPostStripeSignup || isSignInWithEmailLink(auth, window.location.href)) {
+      // If modal is shown, or completing stripe, or in email link flow, let those processes manage loading/UI.
+      // setLoadingAuth(false) might be appropriate here too, depending on desired UX.
+      // For now, we assume these states have their own loading indicators or are quick.
     }
-  }, [isCompletingPostStripeSignup, showSignupModal, currentUser]);
+  }, [currentUser, isCompletingPostStripeSignup, showSignupModal]);
 
-  if (loadingAuth && !showSignupModal) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-3 text-gray-600 dark:text-gray-300">Loading...</p>
-        </div>
-      </div>
-    );
+
+  if (loadingAuth && !showSignupModal && !isCompletingPostStripeSignup && !isSignInWithEmailLink(auth, window.location.href)) {
+    return <div>Loading...</div>;
   }
 
   return (
     <Router>
-      <div className="App bg-gray-100 dark:bg-gray-800 h-full flex flex-col">
-        {authError && (
-          <div 
-            className="fixed top-0 left-0 right-0 bg-red-500 text-white p-3 text-center z-50 shadow-lg"
-            role="alert"
-          >
-            <p>{authError}</p>
-            <button 
-              onClick={() => setAuthError(null)} 
-              className="ml-4 bg-red-700 hover:bg-red-800 text-white font-bold py-1 px-2 rounded text-xs"
-            >
-              Dismiss
-            </button>
-          </div>
+      {authError && <div style={{ color: 'red', padding: '10px', textAlign: 'center', backgroundColor: 'lightpink', borderBottom: '1px solid darkred' }}>Error: {authError}</div>}
+      <PostStripeSignupHandler isCompleting={isCompletingPostStripeSignup}>
+        <Routes>
+          <Route
+            path="/"
+            element={currentUser && !isCompletingPostStripeSignup ? <Home isNewUser={isNewUser} user={currentUser} /> : (isCompletingPostStripeSignup ? null : <Navigate to="/login" replace />)}
+          />
+          <Route
+            path="/login"
+            element={!currentUser || showSignupModal ? <LoginPage /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/subscription/success"
+            element={currentUser ? <SubscriptionSuccess onSuccessShown={handleSubscriptionSuccessShown} /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/subscription/cancel"
+            element={currentUser ? <SubscriptionCancel /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/account"
+            element={currentUser ? <AccountPage user={currentUser} /> : <Navigate to="/login" replace />}
+          />
+        </Routes>
+        {showSignupModal && (
+          <SignupModal
+            user={pendingSignupDetails}
+            onCancel={handleModalCancel}
+            onComplete={(user) => {
+              setCurrentUser(user);
+              setShowSignupModal(false);
+              setPendingSignupDetails(null);
+            }}
+          />
         )}
-        <PostStripeSignupHandler isCompleting={isCompletingPostStripeSignup}>
-          {showSignupModal && pendingSignupDetails && (
-            <SignupModal
-              user={pendingSignupDetails}
-              onCancel={handleModalCancel}
-              setPendingSignupDetails={setPendingSignupDetails}
-            />
-          )}
-          <Routes>
-            <Route
-              path="/"
-              element={currentUser && !isCompletingPostStripeSignup ? <Home isNewUser={isNewUser} user={currentUser} /> : (isCompletingPostStripeSignup ? null : <Navigate to="/login" replace />)}
-            />
-            <Route
-              path="/login"
-              element={!currentUser || showSignupModal ? <LoginPage /> : <Navigate to="/" replace />}
-            />
-            <Route
-              path="/subscription/success"
-              element={currentUser ? <SubscriptionSuccess /> : <Navigate to="/login" replace />}
-            />
-            <Route
-              path="/subscription/cancel"
-              element={<SubscriptionCancel />}
-            />
-            <Route
-              path="/account"
-              element={currentUser && !isCompletingPostStripeSignup ? <AccountPage user={currentUser} /> : (isCompletingPostStripeSignup ? null : <Navigate to="/login" replace />)}
-            />
-          </Routes>
-        </PostStripeSignupHandler>
-      </div>
+      </PostStripeSignupHandler>
     </Router>
   );
 }
