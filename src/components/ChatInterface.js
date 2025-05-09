@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendMessage } from '../api/chatApi';
+import { transcribeAudio } from '../api/speechApi'; // Import the new API function
 import { auth } from '../firebase';
 import { getUserData } from '../services/userService';
 import { createCheckoutSession, checkSubscriptionStatus } from '../services/paymentService';
@@ -100,6 +101,12 @@ const ChatInterface = ({ isNewUser, user }) => {
   const [currentMessagesPagination, setCurrentMessagesPagination] = useState({ hasMore: false, nextPageAfter: null, firstIdInBatch: null });
   const messagesEndRef = useRef(null);
   const chatLogRef = useRef(null); // Ref for the scrollable chat log container
+
+  // Voice input states
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   // Effect to handle window resize for panel visibility
   useEffect(() => {
@@ -489,13 +496,73 @@ const ChatInterface = ({ isNewUser, user }) => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   }, []);
 
+  // Voice input functions
+  const startRecording = async () => {
+    if (!currentUser || !isSubscriptionActive) {
+      setError("Please log in and ensure your subscription is active to use voice input.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' }); // Explicitly set MIME type
+      recorder.ondataavailable = (event) => {
+        setAudioChunks((prev) => [...prev, event.data]);
+      };
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        setAudioChunks([]);
+        if (audioBlob.size > 0) {
+          setIsTranscribing(true);
+          setError(null);
+          try {
+            const transcribedText = await transcribeAudio(audioBlob); // Use the imported function
+            if (transcribedText) {
+              setInput(prevInput => prevInput ? prevInput + ' ' + transcribedText : transcribedText);
+            } else {
+              setError('Transcription failed or returned empty.');
+            }
+          } catch (transcriptionError) {
+            console.error('Transcription error:', transcriptionError);
+            setError(transcriptionError.message || 'Failed to transcribe audio.');
+          } finally {
+            setIsTranscribing(false);
+          }
+        } else {
+          console.log("No audio data recorded.");
+        }
+        // Stop microphone tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      setError('Microphone access denied or not available. Please check permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleVoiceInputClick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
   return (
     <>
       <div className="flex h-full w-full bg-gray-200 dark:bg-gray-900">
         {currentUser && isPanelOpen && (
           <div className="w-64 bg-slate-100 text-slate-800 dark:bg-gray-800 dark:text-slate-200 p-4 flex flex-col rounded-l-lg shadow-xl">
             <div className="flex justify-between items-center mb-1">
-              {/* <h2 className="text-lg font-semibold">History</h2> */}
               <button 
                 onClick={() => setIsPanelOpen(false)} 
                 className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-md hover:bg-slate-200 dark:hover:bg-gray-700"
@@ -638,13 +705,6 @@ const ChatInterface = ({ isNewUser, user }) => {
                 {user && (
                   <div className="flex items-center">
                     <span>Welcome, {user.displayName?.split(' ')[0] || 'friend'}!</span>
-                    {/* {user.photoURL && (
-                      <img 
-                        src={user.photoURL} 
-                        alt="Profile" 
-                        className="h-6 w-6 rounded-full ml-2 border border-blue-400"
-                      />
-                    )} */}
                   </div>
                 )}
               </div>
@@ -733,14 +793,39 @@ const ChatInterface = ({ isNewUser, user }) => {
                   className="flex-grow px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm disabled:bg-gray-100 dark:disabled:bg-gray-800 bg-white dark:bg-gray-700 dark:text-gray-200 resize-none overflow-y-auto hide-scrollbar"
                   rows="1"
                   style={{ maxHeight: '120px' }}
-                  disabled={isLoading || !currentUser || isSavingConversation || !isSubscriptionActive}
+                  disabled={isLoading || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing || isRecording}
                 />
                 <button
-                  onClick={handleSend}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-r-md disabled:opacity-50 shadow-sm"
-                  disabled={isLoading || !input.trim() || !currentUser || isSavingConversation || !isSubscriptionActive}
+                  onClick={handleVoiceInputClick}
+                  className={`p-2.5 rounded-md ml-2 ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white font-semibold disabled:opacity-50 shadow-sm`}
+                  disabled={isLoading || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing}
+                  title={isRecording ? "Stop recording" : "Start voice input"}
                 >
-                  {isSavingConversation ? 'Saving...' : (isLoading ? 'Sending...' : 'Send')}
+                  {isTranscribing ? (
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : isRecording ? (
+                    // Stop Icon (Square)
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5 5h10v10H5V5z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    // Microphone Icon
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4z" />
+                      <path fillRule="evenodd" d="M5.5 8.5A.5.5 0 016 8h8a.5.5 0 010 1H6a.5.5 0 01-.5-.5z" clipRule="evenodd" />
+                      <path fillRule="evenodd" d="M10 18a7 7 0 007-7h-1.558a5.5 5.5 0 01-10.884 0H3a7 7 0 007 7z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </button>
+                <button
+                  onClick={handleSend}
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-r-md disabled:opacity-50 shadow-sm ml-0.5" // Adjusted ml
+                  disabled={isLoading || !input.trim() || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing || isRecording}
+                >
+                  {isSavingConversation ? 'Saving...' : (isLoading || isTranscribing ? '...' : 'Send')}
                 </button>
               </div>
             </div>
