@@ -67,6 +67,7 @@ const ChatInterface = ({ isNewUser, user }) => {
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(window.innerWidth >= 768); // Initialize based on screen width (md breakpoint)
+  const [isWideScreen, setIsWideScreen] = useState(window.innerWidth >= 768); // For placeholder text
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
       const localTheme = window.localStorage.getItem('theme');
@@ -100,12 +101,16 @@ const ChatInterface = ({ isNewUser, user }) => {
     const handleResize = () => {
       if (window.innerWidth < 768) { // md breakpoint
         setIsPanelOpen(false);
+        setIsWideScreen(false); // Update for placeholder
       } else {
         setIsPanelOpen(true);
+        setIsWideScreen(true); // Update for placeholder
       }
     };
 
     window.addEventListener('resize', handleResize);
+    // Call once to set initial state based on current width
+    handleResize(); 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -540,7 +545,7 @@ const ChatInterface = ({ isNewUser, user }) => {
           try {
             const transcribedText = await transcribeAudio(audioBlob);
             if (transcribedText) {
-              await handleSend(transcribedText);
+              setInput(prevInput => prevInput ? prevInput + ' ' + transcribedText : transcribedText); // New behavior: append to input
             } else {
               setError('Transcription failed or returned empty.');
             }
@@ -845,7 +850,15 @@ const ChatInterface = ({ isNewUser, user }) => {
                       handleSend();
                     }
                   }}
-                  placeholder={currentUser ? (isSubscriptionActive ? (selectedConversationId ? "Reply..." : "Type your message... (Shift+Enter for new line)") : "Subscribe to chat") : "Log in to chat"}
+                  placeholder={
+                    currentUser
+                      ? isSubscriptionActive
+                        ? selectedConversationId
+                          ? "Reply..."
+                          : `Type your message...${isWideScreen ? " (Shift+Enter for new line)" : ""}`
+                        : "Subscribe to chat"
+                      : "Log in to chat"
+                  }
                   className="flex-grow px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm disabled:bg-gray-100 dark:disabled:bg-gray-800 bg-white dark:bg-gray-700 dark:text-gray-200 resize-none overflow-y-auto hide-scrollbar"
                   rows="1"
                   style={{ maxHeight: '120px' }}
