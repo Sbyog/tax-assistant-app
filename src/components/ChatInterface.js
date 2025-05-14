@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { IoPaperPlane } from 'react-icons/io5'; // Import the solid icon
 import { HiMenu, HiX } from 'react-icons/hi'; // Import menu and close icons
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
+import remarkGfm from 'remark-gfm'; // Import remark-gfm for table support
+import rehypeRaw from 'rehype-raw'; // Import rehype-raw for HTML support
 import { sendMessage } from '../api/chatApi';
 import { transcribeAudio } from '../api/speechApi'; // Import the new API function
 import { auth } from '../firebase';
@@ -802,7 +804,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                     }`}
                   >
                     {msg.sender === 'bot' && typeof msg.text === 'string' ? (
-                      <ReactMarkdown>{msg.text}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{msg.text}</ReactMarkdown>
                     ) : typeof msg.text === 'string' ? (
                       msg.text.split('\n').map((line, i) => (
                         <span key={i}>{line}{i !== msg.text.split('\n').length -1 && <br/>}</span>
