@@ -1,4 +1,4 @@
-# AI Tools App
+# Solara: Your Pocket Communicaion Coach
 
 A React.js application for AI tools with Firebase integration.
 

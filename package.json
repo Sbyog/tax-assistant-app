@@ -2,7 +2,7 @@
   "name": "ai-tools-app",
   "version": "0.1.0",
   "private": true,
-  "description": "An application for AI tools.",
+  "description": "Solara: Your Pocket Communicaion Coach",
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",

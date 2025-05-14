@@ -14,6 +14,14 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
+// print masked api key
+console.log("firebaseConfig:", {
+  apiKey: firebaseConfig.apiKey && typeof firebaseConfig.apiKey === 'string' && firebaseConfig.apiKey.length > 10 
+    ? `${firebaseConfig.apiKey.substring(0, 5)}...${firebaseConfig.apiKey.substring(firebaseConfig.apiKey.length - 5)}` 
+    : (firebaseConfig.apiKey && typeof firebaseConfig.apiKey === 'string' ? firebaseConfig.apiKey.replace(/./g, "*") : "NOT_SET")
+});
+
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 

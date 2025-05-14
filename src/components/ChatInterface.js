@@ -758,7 +758,7 @@ const ChatInterface = ({ isNewUser, user }) => {
                   <HiMenu className="w-6 h-6" />
                 </button>
               )}
-              <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">AI Chat</h2>
+              <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Solara</h2>
             </div>
             
             {showWelcomeMessage && !isNewUser && (
