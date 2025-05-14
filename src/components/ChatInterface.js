@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoPaperPlane } from 'react-icons/io5'; // Import the solid icon
 import { HiMenu, HiX } from 'react-icons/hi'; // Import menu and close icons
+import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import { sendMessage } from '../api/chatApi';
 import { transcribeAudio } from '../api/speechApi'; // Import the new API function
 import { auth } from '../firebase';
@@ -795,13 +796,20 @@ const ChatInterface = ({ isNewUser, user }) => {
               {messages.map((msg, index) => (
                 <div key={msg.id || index} id={`msg-${msg.id}`} className={`flex w-full ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl px-4 py-2.5 rounded-xl shadow-md ${
-                      msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                    className={`prose prose-sm dark:prose-invert max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl px-4 py-2.5 rounded-xl shadow-md ${
+                      msg.sender === 'user' ? 'bg-blue-500 text-white prose-strong:text-white prose-a:text-blue-200 hover:prose-a:text-blue-100' 
+                                            : 'bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-200 prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-a:text-blue-600 dark:prose-a:text-blue-400 hover:prose-a:text-blue-700 dark:hover:prose-a:text-blue-300'
                     }`}
                   >
-                    {typeof msg.text === 'string' ? msg.text.split('\n').map((line, i) => (
-                      <span key={i}>{line}{i !== msg.text.split('\n').length -1 && <br/>}</span>
-                    )) : JSON.stringify(msg.text)}
+                    {msg.sender === 'bot' && typeof msg.text === 'string' ? (
+                      <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    ) : typeof msg.text === 'string' ? (
+                      msg.text.split('\n').map((line, i) => (
+                        <span key={i}>{line}{i !== msg.text.split('\n').length -1 && <br/>}</span>
+                      ))
+                    ) : (
+                      JSON.stringify(msg.text)
+                    )}
                   </div>
                 </div>
               ))}
