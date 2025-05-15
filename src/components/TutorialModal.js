@@ -10,6 +10,10 @@ const tutorialSteps = [
     content: "Click the '+' button in the sidebar to start a new chat. Your previous conversations will be saved here too."
   },
   {
+    title: "Voice Input",
+    content: "Prefer to speak? Click the microphone icon to use voice input for your messages. Make sure your microphone is enabled!"
+  },
+  {
     title: "All Set!",
     content: "You're all set! Ask me anything or try a command. Enjoy!"
   }

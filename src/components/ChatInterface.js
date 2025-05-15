@@ -43,7 +43,6 @@ const WelcomeModal = ({ onClose, user }) => {
             <li>Chat with our advanced AI assistant</li>
             <li>Get intelligent responses to your questions</li>
             <li>Maintain conversation history for future reference</li>
-            <li>Upload documents for AI-powered analysis (premium feature)</li>
           </ul>
           <p className="pt-2">We're excited to have you here and hope our assistant makes your tasks easier and more efficient.</p>
         </div>
