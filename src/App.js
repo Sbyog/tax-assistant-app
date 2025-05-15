@@ -63,7 +63,8 @@ function App() {
             window.localStorage.removeItem('emailForSignIn');
             window.history.replaceState({}, document.title, '/'); // Change to root path
             setAuthError(null);
-            // onAuthStateChanged will handle user state. processingEmailLinkRef will be cleared there.
+            // Force a reload to ensure the app re-initializes with the new auth state in the current tab
+            window.location.reload(); 
           })
           .catch((error) => {
             console.error("Error signing in with email link:", error);
@@ -194,23 +195,30 @@ function App() {
 
   // useEffect for managing loading state based on auth and modal states
   useEffect(() => {
-    if (auth.currentUser && !isCompletingPostStripeSignup && !showSignupModal) {
+    const urlIsEmailLink = isSignInWithEmailLink(auth, window.location.href);
+    console.log("App.js: Secondary loading useEffect. currentUser:", currentUser ? currentUser.uid : 'null', "isCompletingPostStripeSignup:", isCompletingPostStripeSignup, "showSignupModal:", showSignupModal, "urlIsEmailLink:", urlIsEmailLink, "current loadingAuth state:", loadingAuth, "pathname:", window.location.pathname);
+
+    if (currentUser && !isCompletingPostStripeSignup && !showSignupModal) {
+      console.log("App.js: Secondary useEffect: Setting loadingAuth to false (user present, not modal, not stripe complete). Current path:", window.location.pathname);
       setLoadingAuth(false);
-    } else if (!auth.currentUser && !showSignupModal && !isSignInWithEmailLink(auth, window.location.href)) {
-      // If no user, not showing modal, and not in email link flow, stop loading.
+    } else if (!currentUser && !showSignupModal && !urlIsEmailLink) { 
+      console.log("App.js: Secondary useEffect: Setting loadingAuth to false (no user, not modal, not email link). Current path:", window.location.pathname);
       setLoadingAuth(false);
-    } else if (showSignupModal || isCompletingPostStripeSignup || isSignInWithEmailLink(auth, window.location.href)) {
-      // If modal is shown, or completing stripe, or in email link flow, let those processes manage loading/UI.
-      // setLoadingAuth(false) might be appropriate here too, depending on desired UX.
-      // For now, we assume these states have their own loading indicators or are quick.
+    } else if (showSignupModal || isCompletingPostStripeSignup || urlIsEmailLink) { 
+      console.log("App.js: Secondary useEffect: loadingAuth NOT changed (modal, stripe complete, or email link active). Current path:", window.location.pathname);
+    } else {
+      console.log("App.js: Secondary useEffect: Fallback case, loadingAuth state might need review. Current path:", window.location.pathname);
     }
   }, [currentUser, isCompletingPostStripeSignup, showSignupModal]);
 
+  console.log("App.js: Rendering Check. loadingAuth:", loadingAuth, "currentUser:", currentUser ? currentUser.uid : 'null', "showSignupModal:", showSignupModal, "isCompletingPostStripeSignup:", isCompletingPostStripeSignup, "currentPath:", window.location.pathname, "isEmailLinkRaw:", isSignInWithEmailLink(auth, window.location.href));
 
   if (loadingAuth && !showSignupModal && !isCompletingPostStripeSignup && !isSignInWithEmailLink(auth, window.location.href)) {
+    console.log("App.js: Rendering Loading... div because loadingAuth is true and other conditions met.");
     return <div>Loading...</div>;
   }
 
+  console.log("App.js: Proceeding to render Router.");
   return (
     <Router>
       {authError && <div style={{ color: 'red', padding: '10px', textAlign: 'center', backgroundColor: 'lightpink', borderBottom: '1px solid darkred' }}>Error: {authError}</div>}
