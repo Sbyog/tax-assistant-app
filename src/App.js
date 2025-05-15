@@ -29,126 +29,155 @@ const PostStripeSignupHandler = ({ isCompleting, children }) => {
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
-  const [isNewUser, setIsNewUser] = useState(false); // This will now be correctly set
+  const [loadingAuth, setLoadingAuth] = useState(true); // Start with loading true
+  const [isNewUser, setIsNewUser] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [pendingSignupDetails, setPendingSignupDetails] = useState(null);
   const [isCompletingPostStripeSignup, setIsCompletingPostStripeSignup] = useState(false);
-  const [authError, setAuthError] = useState(null); // For displaying auth errors
+  const [authError, setAuthError] = useState(null);
+
+  const emailLinkSignInInitiatedThisSession = React.useRef(false);
+  const processingEmailLinkRef = React.useRef(false);
 
   useEffect(() => {
-    // Handle sign in with email link
-    if (isSignInWithEmailLink(auth, window.location.href)) {
+    console.log("App.js: Current URL at useEffect start:", window.location.href); // Log the URL
+    const currentUrlIsEmailLink = isSignInWithEmailLink(auth, window.location.href);
+    console.log("App.js: useEffect run. URL is email link?", currentUrlIsEmailLink, "Initiated this session?", emailLinkSignInInitiatedThisSession.current);
+
+    if (currentUrlIsEmailLink && !emailLinkSignInInitiatedThisSession.current) {
+      console.log("App.js: Initial processing of email link URL.");
+      emailLinkSignInInitiatedThisSession.current = true;
+      processingEmailLinkRef.current = true;
+      setLoadingAuth(true); 
+
       let email = window.localStorage.getItem('emailForSignIn');
       if (!email) {
         email = window.prompt('Please provide your email for confirmation');
       }
+
       if (email) {
+        console.log("App.js: Attempting signInWithEmailLink for", email);
         signInWithEmailLink(auth, email, window.location.href)
           .then(async (result) => {
+            console.log("User signed in with email link (promise resolved):", result.user.uid);
             window.localStorage.removeItem('emailForSignIn');
-            window.history.replaceState({}, document.title, window.location.pathname);
-            setAuthError(null); // Clear any previous auth errors
-            // User is signed in, onAuthStateChanged will handle the rest
+            window.history.replaceState({}, document.title, '/'); // Change to root path
+            setAuthError(null);
+            // onAuthStateChanged will handle user state. processingEmailLinkRef will be cleared there.
           })
           .catch((error) => {
             console.error("Error signing in with email link:", error);
-            setAuthError(error.message || "Failed to sign in with email link. The link may be invalid or expired.");
+            setAuthError(error.message || "Failed to sign in with email link. Link may be invalid or expired.");
             window.localStorage.removeItem('emailForSignIn');
+            processingEmailLinkRef.current = false;
+            emailLinkSignInInitiatedThisSession.current = false; 
+            setCurrentUser(null);
+            setLoadingAuth(false);
           });
       } else {
         setAuthError("Email is required to complete sign-in.");
+        processingEmailLinkRef.current = false;
+        emailLinkSignInInitiatedThisSession.current = false;
+        setCurrentUser(null);
+        setLoadingAuth(false);
       }
+    } else if (emailLinkSignInInitiatedThisSession.current && !auth.currentUser) {
+      // This case handles StrictMode re-runs where the link was initiated,
+      // but onAuthStateChanged hasn't fired with a user yet from that initiation.
+      // We ensure we stay in a loading/processing state.
+      console.log("App.js: Subsequent useEffect run, email link was initiated, user not yet current. Maintaining processing state.");
+      processingEmailLinkRef.current = true; 
+      setLoadingAuth(true);                  
+    } else if (!currentUrlIsEmailLink) {
+      // Not an email link URL, and we haven't initiated sign-in for this session via email link.
+      // Or, URL was cleaned and user is already set, so emailLinkSignInInitiatedThisSession might be false.
+      processingEmailLinkRef.current = false;
+      // setLoadingAuth(false) will be handled by onAuthStateChanged if no user session is found.
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("App.js: onAuthStateChanged triggered. User:", user ? user.uid : 'null', "ProcessingEmailLinkRef:", processingEmailLinkRef.current, "InitiatedThisSession:", emailLinkSignInInitiatedThisSession.current);
+
       if (user) {
-        setLoadingAuth(true);
+        console.log("App.js: onAuthStateChanged: User IS present:", user.uid);
+        processingEmailLinkRef.current = false; 
+        emailLinkSignInInitiatedThisSession.current = false; 
+        
+        setLoadingAuth(true); 
         try {
           const storedUid = localStorage.getItem('signupUid');
-          // const storedEmail = localStorage.getItem('signupEmail'); // Keep for potential future use if needed
-
           const existsInFirestore = await checkIfUserExists(user.uid);
 
           if (existsInFirestore) {
             if (storedUid === user.uid) {
-              // User exists in Firestore AND signupUid matches:
-              // This is a user returning from a successful Stripe signup.
               console.log('App.js: User returning from Stripe, exists in Firestore. Setting as new user for tutorial and redirecting to success page.');
               setCurrentUser(user);
-              setIsNewUser(true); // Treat as new user for tutorial purposes
-              setIsCompletingPostStripeSignup(true); // Redirect to subscription success
-              // Clear localStorage now that we've identified them
+              setIsNewUser(true); 
+              setIsCompletingPostStripeSignup(true); 
               localStorage.removeItem('signupFirstName');
               localStorage.removeItem('signupLastName');
               localStorage.removeItem('signupEmail');
               localStorage.removeItem('signupUid');
               localStorage.removeItem('signupPhotoURL');
             } else {
-              // User exists in Firestore, but no matching storedUid:
-              // This is a genuinely existing, returning user.
               console.log('App.js: Existing user, proceeding to login.');
               await updateUserLastLogin(user.uid);
               setCurrentUser(user);
               setIsNewUser(false);
               setIsCompletingPostStripeSignup(false);
-              // Clear any potentially stale localStorage items
               localStorage.removeItem('signupFirstName');
               localStorage.removeItem('signupLastName');
               localStorage.removeItem('signupEmail');
               localStorage.removeItem('signupUid');
               localStorage.removeItem('signupPhotoURL');
             }
-          } else {
-            // User does NOT exist in Firestore.
-            // This could be a brand new user starting the signup flow,
-            // or someone who completed Firebase auth but didn't finish the Stripe part where the DB record is made.
+          } else { 
             if (storedUid === user.uid) {
-               // This case implies they went to Stripe, but the backend didn't create the user record yet,
-               // or they came back before the webhook processed.
-               // The SubscriptionSuccess page has polling, so we can direct them there.
-               // We'll mark them as new user and let SubscriptionSuccess handle verification.
               console.log('App.js: User authenticated, not in Firestore, but signupUid matches. Likely post-Stripe, pre-DB record. Setting as new user for tutorial.');
               setCurrentUser(user);
               setIsNewUser(true);
-              setIsCompletingPostStripeSignup(true); // Let SubscriptionSuccess page handle polling for DB record
+              setIsCompletingPostStripeSignup(true); 
             } else {
-              // Brand new user, or incomplete previous signup not related to current Stripe flow.
               console.log('App.js: New user (not in Firestore, no matching signupUid), showing signup modal.');
               setPendingSignupDetails(user);
               setShowSignupModal(true);
-              setCurrentUser(null); // Don't set current user until modal is completed
-              setIsNewUser(true); // Will be a new user after modal
+              setCurrentUser(null); 
+              setIsNewUser(true); 
               setIsCompletingPostStripeSignup(false);
             }
           }
-          setLoadingAuth(false);
+          setLoadingAuth(false); 
         } catch (error) {
           console.error("Error in user check/setup:", error);
           setAuthError("Error during user setup: " + error.message);
-          auth.signOut(); // Sign out on error to prevent inconsistent state
+          auth.signOut(); 
           setCurrentUser(null);
           setShowSignupModal(false);
           setPendingSignupDetails(null);
           setIsCompletingPostStripeSignup(false);
-          setLoadingAuth(false);
+          setLoadingAuth(false); 
         }
-      } else {
-        // User is signed out
-        console.log('App.js: User signed out.');
-        setCurrentUser(null);
-        setIsNewUser(false);
-        setShowSignupModal(false);
-        setPendingSignupDetails(null);
-        setIsCompletingPostStripeSignup(false);
-        setLoadingAuth(false);
-        // Optionally clear localStorage here too if it makes sense for your logout flow
-        // localStorage.removeItem('signupUid'); // etc.
+      } else { // User is null
+        if (processingEmailLinkRef.current) {
+          console.log("App.js: onAuthStateChanged: user is null, but email link processing ref is true. Waiting for signInWithEmailLink to complete or error out.");
+          // setLoadingAuth(true) should have been set when email link processing started.
+        } else {
+          console.log('App.js: User signed out or initial load without user/active email link processing. Resetting states.');
+          setCurrentUser(null);
+          setIsNewUser(false);
+          setShowSignupModal(false);
+          setPendingSignupDetails(null);
+          setIsCompletingPostStripeSignup(false);
+          setLoadingAuth(false); 
+        }
       }
     });
 
-    return () => unsubscribe();
-  }, []); // Empty dependency array: runs once on mount and cleans up on unmount
+    return () => {
+      console.log("App.js: Unsubscribing from onAuthStateChanged.");
+      unsubscribe();
+    };
+  }, []); 
 
   const handleModalCancel = () => {
     setShowSignupModal(false);

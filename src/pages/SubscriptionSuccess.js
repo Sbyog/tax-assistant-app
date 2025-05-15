@@ -51,9 +51,15 @@ const SubscriptionSuccess = ({ onSuccessShown }) => {
             }
             setTimeout(() => navigate('/'), 2000);
           } else {
-            setError(`Subscription not active (${subStatus.status || 'unknown'}). Please contact support if this is an error.`);
+            setError(`Subscription not active (${subStatus.status || 'unknown'}). Please contact support if this is an error. You will be logged out and redirected to the login page.`);
             clearLocalStorageSignupDetails();
-            setTimeout(() => navigate('/account'), 4000); // Or login, depending on desired flow for failed sub check
+            // Sign out user before redirecting to login
+            auth.signOut().then(() => {
+                navigate('/login');
+            }).catch(err => {
+                console.error("Error signing out after subscription check failure:", err);
+                navigate('/login'); // Still navigate
+            });
           }
         } else {
           // User does not exist, poll a few times

@@ -37,7 +37,7 @@ const LoginPage = () => {
     const actionCodeSettings = {
       // URL you want to redirect back to. The domain (www.example.com) for this
       // URL must be whitelisted in the Firebase Console.
-      url: window.location.origin, // Or your specific app URL
+      url: window.location.origin + '/__/auth/action', // Changed to a specific callback path
       handleCodeInApp: true, // This must be true.
     };
 
