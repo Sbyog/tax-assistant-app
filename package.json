@@ -16,6 +16,8 @@
     "react-scripts": "5.0.1",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
+    "sharp": "^0.34.1",
+    "to-ico": "^1.1.5",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
