@@ -11,9 +11,9 @@ const Home = ({ isNewUser, user }) => {
 
   useEffect(() => {
     if (isNewUser) {
-      setWelcomeMessage(`Welcome ${user?.displayName || 'to AI Assistant'}! We're glad you're here.`);
+      setWelcomeMessage(`Welcome ${user?.displayName}! I'm your tax bot and I can help you with your tax questions.`);
     } else {
-      setWelcomeMessage(`Welcome back, ${user?.displayName || 'friend'}!`);
+      setWelcomeMessage(`Welcome back, ${user?.displayName || 'boss'}!`);
     }
     const timer = setTimeout(() => {
       setShowWelcome(false);

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Text Update Guide - Solara App</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .file-path {
+            background: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .code-block {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        .warning {
+            background: #fff3cd;
+            padding: 10px;
+            border-left: 4px solid #ffc107;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>How to Update Text in Solara App</h1>
+    
+    <div class="warning">
+        ⚠️ Before making any changes:
+        <ul>
+            <li>Always make a backup of the files you plan to modify</li>
+            <li>Test changes in development environment first</li>
+            <li>Keep the same text formatting (if text includes special characters or formatting)</li>
+        </ul>
+    </div>
+
+    <h2>1. Tutorial Text Updates</h2>
+    <p>To modify the tutorial steps and content:</p>
+    <div class="file-path">src/components/TutorialModal.js</div>
+    <p>Find the <code>tutorialSteps</code> array at the beginning of the file. Each step has a title and content:</p>
+    <div class="code-block">
+const tutorialSteps = [
+    {
+        title: "Get Started",
+        content: "Welcome! Type your questions or commands..."
+    },
+    {
+        title: "Manage Chats",
+        content: "Click the '+' button in the sidebar to start a new chat..."
+    },
+    // ... other steps
+];</div>
+    <p>Modify the title and content properties as needed. Keep the same array structure.</p>
+
+    <h2>2. Login Page Text Updates</h2>
+    <div class="file-path">src/pages/LoginPage.js</div>
+    <p>To update the login page text:</p>
+    <ul>
+        <li>Main title: Find <code>&lt;h1&gt;</code> tag with <code>"Welcome to Solara"</code></li>
+        <li>Subtitle: Find <code>&lt;h2&gt;</code> tag with <code>"Your Pocket Communication Coach"</code></li>
+        <li>Welcome message: Find <code>&lt;p&gt;</code> tag with <code>"Please sign in to continue"</code></li>
+        <li>Button text: Look for the button elements containing "Sign in with Google" and "Sign in with Email Link"</li>
+    </ul>
+
+    <h2>3. Chat Interface Text Updates</h2>
+    <div class="file-path">src/components/ChatInterface.js</div>
+    <p>To modify chat interface text:</p>
+    <ul>
+        <li>Header: Find <code>&lt;h2&gt;</code> tag containing "Solara" in the top navigation bar</li>
+        <li>Welcome Modal: Look for the <code>WelcomeModal</code> component section:
+            <ul>
+                <li>Title: <code>"Welcome, {user?.displayName || 'New User'}!"</code></li>
+                <li>Welcome text: <code>"Thank you for joining our AI assistant platform!"</code></li>
+                <li>Feature list: Update the <code>&lt;ul&gt;</code> items in the modal</li>
+                <li>Button text: <code>"Get Started"</code></li>
+            </ul>
+        </li>
+        <li>Input placeholder text: Find the textarea element with placeholder props like <code>"Type your message..."</code></li>
+        <li>Button labels: Look for buttons containing "New Chat", "Account", "Logout", etc.</li>
+    </ul>
+
+    <h2>4. Error Messages and Notifications</h2>
+    <p>Error messages and notifications are spread throughout the components. Common locations:</p>
+    <ul>
+        <li>Login errors: In <code>LoginPage.js</code>, look for <code>setError</code> calls</li>
+        <li>Chat errors: In <code>ChatInterface.js</code>, look for <code>setError</code> calls</li>
+        <li>Subscription messages: Search for text in subscription-related components</li>
+    </ul>
+
+    <div class="warning">
+        <strong>Important Notes:</strong>
+        <ul>
+            <li>Some text includes dynamic content using variables (e.g., {user.displayName}). Keep these dynamic elements when updating text.</li>
+            <li>Maintain proper quotation marks and string formatting</li>
+            <li>After making changes, test the application to ensure everything displays correctly</li>
+            <li>If you're not comfortable with code edits, please work with a developer</li>
+        </ul>
+    </div>
+
+    <h2>5. Deployment to Google Cloud Run</h2>
+    <p>Follow these steps to deploy the application to Google Cloud Run:</p>
+
+    <h3>Step 1: Install Google Cloud CLI</h3>
+    <ol>
+        <li>Visit <a href="https://cloud.google.com/sdk/docs/install" target="_blank" class="text-blue-600 hover:text-blue-800">https://cloud.google.com/sdk/docs/install</a></li>
+        <li>Download and install the Google Cloud CLI for your operating system</li>
+        <li>Verify installation by opening a terminal and running: <code>gcloud --version</code></li>
+    </ol>
+
+    <h3>Step 2: Authentication and Project Setup</h3>
+    <ol>
+        <li>Log in to Google Cloud:
+            <div class="code-block">gcloud auth login</div>
+            <p class="text-sm text-gray-600 mt-1">Follow the browser prompts to authenticate your account</p>
+        </li>
+        <li>Set the project:
+            <div class="code-block">gcloud config set project solara-459523</div>
+        </li>
+    </ol>
+
+    <h3>Step 3: Prepare for Deployment</h3>
+    <ol>
+        <li>Navigate to your project directory in the terminal</li>
+        <li>Open .gitignore and comment out the .env line:
+            <div class="code-block"># dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+/build
+
+# misc
+.DS_Store
+#.env            # Comment out this line
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local</div>
+        </li>
+        <li>Make sure your .env file contains the correct production values</li>
+    </ol>
+
+    <h3>Step 4: Deploy</h3>
+    <ol>
+        <li>Run the deployment command:
+            <div class="code-block">gcloud run deploy gpt-assistant-app --source . --region asia-southeast1</div>
+            <p class="text-sm text-gray-600 mt-1">This will build and deploy your application. The process may take a few minutes.</p>
+        </li>
+        <li>After successful deployment, Google Cloud will provide you with the service URL where your application is accessible.</li>
+    </ol>
+
+    <h3>Step 5: Post-Deployment</h3>
+    <ol>
+        <li>Once deployment is complete, uncomment the .env line in .gitignore:
+            <div class="code-block"># misc
+.DS_Store
+.env             # Uncomment this line
+.env.local</div>
+        </li>
+        <li>Verify that your application is working correctly at the provided URL</li>
+        <li>Check the Cloud Run console for logs if you encounter any issues</li>
+    </ol>
+
+    <div class="warning mt-4">
+        <strong>Deployment Notes:</strong>
+        <ul>
+            <li>Always verify your .env variables before deploying</li>
+            <li>Make sure your Firebase and other service configurations are set up for production</li>
+            <li>Keep your .env file secure and never commit it to version control</li>
+            <li>Monitor your Cloud Run dashboard for any errors or performance issues</li>
+        </ul>
+    </div>
+
+</body>
+</html>
