@@ -66,8 +66,11 @@ const LoginPage = () => {
         <h2  className="text-lg md:text-lg font-bold text-gray-600 mb-6 dark:text-white">
         Your personal tax assistant with extensive knowledge of Australian tax laws.
         </h2>
+        <p className="text-gray-600 dark:text-gray-300 mb-2">
+        Please sign in to continue.
+        </p>
         <p className="text-gray-600 dark:text-gray-300 mb-8">
-          Please sign in to continue.
+        New users get a free 14-day trial!
         </p>
         
         {error && (

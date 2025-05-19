@@ -1,8 +1,8 @@
 {
-  "name": "ai-tools-app",
+  "name": "your-tax-bot",
   "version": "0.1.0",
   "private": true,
-  "description": "Solara: Your Pocket Communicaion Coach",
+  "description": "Your Tax Bot",
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",

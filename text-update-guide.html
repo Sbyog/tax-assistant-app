@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Text Update Guide - Solara App</title>
+    <title>Text Update Guide - Your Tax Bot App</title>
     <style>
         body { 
             font-family: Arial, sans-serif;
@@ -35,7 +35,7 @@
     </style>
 </head>
 <body>
-    <h1>How to Update Text in Solara App</h1>
+    <h1>How to Update Text in Your Tax Bot App</h1>
     
     <div class="warning">
         ⚠️ Before making any changes:
@@ -68,9 +68,9 @@ const tutorialSteps = [
     <div class="file-path">src/pages/LoginPage.js</div>
     <p>To update the login page text:</p>
     <ul>
-        <li>Main title: Find <code>&lt;h1&gt;</code> tag with <code>"Welcome to Solara"</code></li>
+        <li>Main title: Find <code>&lt;h1&gt;</code> tag with <code>"Welcome to Your Tax Bot"</code></li>
         <li>Subtitle: Find <code>&lt;h2&gt;</code> tag with <code>"Your Pocket Communication Coach"</code></li>
-        <li>Welcome message: Find <code>&lt;p&gt;</code> tag with <code>"Please sign in to continue"</code></li>
+        <li>Welcome message: Find <code>&lt;p&gt;</code> tag with <code>"Please sign in to continue. New users get a free 14-day trial!"</code></li>
         <li>Button text: Look for the button elements containing "Sign in with Google" and "Sign in with Email Link"</li>
     </ul>
 
@@ -78,7 +78,7 @@ const tutorialSteps = [
     <div class="file-path">src/components/ChatInterface.js</div>
     <p>To modify chat interface text:</p>
     <ul>
-        <li>Header: Find <code>&lt;h2&gt;</code> tag containing "Solara" in the top navigation bar</li>
+        <li>Header: Find <code>&lt;h2&gt;</code> tag containing "Your Tax Bot" in the top navigation bar</li>
         <li>Welcome Modal: Look for the <code>WelcomeModal</code> component section:
             <ul>
                 <li>Title: <code>"Welcome, {user?.displayName || 'New User'}!"</code></li>
@@ -126,7 +126,7 @@ const tutorialSteps = [
             <p class="text-sm text-gray-600 mt-1">Follow the browser prompts to authenticate your account</p>
         </li>
         <li>Set the project:
-            <div class="code-block">gcloud config set project solara-459523</div>
+            <div class="code-block">gcloud config set project Your Tax Bot-459523</div>
         </li>
     </ol>
 
