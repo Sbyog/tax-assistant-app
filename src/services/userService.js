@@ -71,8 +71,14 @@ export const createUserInFirestore = async (user) => {
     }
     // Assuming 201 Created or similar success status
     const createdUserData = await response.json();
-    console.log('User created via API:', createdUserData);
-    return createdUserData; // Return the user data from the response
+    console.log('User created via API, full response:', createdUserData); 
+    if (createdUserData && createdUserData.user) {
+      console.log('Returning user object from response:', createdUserData.user);
+      return createdUserData.user; // Return the nested user object
+    } else {
+      // This case should ideally be caught by !response.ok, but as a safeguard:
+      throw new Error('User creation response did not contain user data.');
+    }
   } catch (error) {
     console.error('Error creating user via API:', error);
     throw error;

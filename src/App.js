@@ -186,25 +186,25 @@ function App() {
   };
   
   const handleSubscriptionSuccessShown = () => {
-    console.log("App.js: SubscriptionSuccess page has been shown, setting isCompletingPostStripeSignup to false.");
+    // console.log("App.js: SubscriptionSuccess page has been shown, setting isCompletingPostStripeSignup to false.");
     setIsCompletingPostStripeSignup(false);
   };
 
   // useEffect for managing loading state based on auth and modal states
   useEffect(() => {
     const urlIsEmailLink = isSignInWithEmailLink(auth, window.location.href);
-    console.log("App.js: Secondary loading useEffect. currentUser:", currentUser ? currentUser.uid : 'null', "isCompletingPostStripeSignup:", isCompletingPostStripeSignup, "showSignupModal:", showSignupModal, "urlIsEmailLink:", urlIsEmailLink, "current loadingAuth state:", loadingAuth, "pathname:", window.location.pathname);
+    // console.log("App.js: Secondary loading useEffect. currentUser:", currentUser ? currentUser.uid : 'null', "isCompletingPostStripeSignup:", isCompletingPostStripeSignup, "showSignupModal:", showSignupModal, "urlIsEmailLink:", urlIsEmailLink, "current loadingAuth state:", loadingAuth, "pathname:", window.location.pathname);
 
     if (currentUser && !isCompletingPostStripeSignup && !showSignupModal) {
-      console.log("App.js: Secondary useEffect: Setting loadingAuth to false (user present, not modal, not stripe complete). Current path:", window.location.pathname);
+      // console.log("App.js: Secondary useEffect: Setting loadingAuth to false (user present, not modal, not stripe complete). Current path:", window.location.pathname);
       setLoadingAuth(false);
     } else if (!currentUser && !showSignupModal && !urlIsEmailLink) { 
-      console.log("App.js: Secondary useEffect: Setting loadingAuth to false (no user, not modal, not email link). Current path:", window.location.pathname);
+      // console.log("App.js: Secondary useEffect: Setting loadingAuth to false (no user, not modal, not email link). Current path:", window.location.pathname);
       setLoadingAuth(false);
     } else if (showSignupModal || isCompletingPostStripeSignup || urlIsEmailLink) { 
-      console.log("App.js: Secondary useEffect: loadingAuth NOT changed (modal, stripe complete, or email link active). Current path:", window.location.pathname);
+      // console.log("App.js: Secondary useEffect: loadingAuth NOT changed (modal, stripe complete, or email link active). Current path:", window.location.pathname);
     } else {
-      console.log("App.js: Secondary useEffect: Fallback case, loadingAuth state might need review. Current path:", window.location.pathname);
+      // console.log("App.js: Secondary useEffect: Fallback case, loadingAuth state might need review. Current path:", window.location.pathname);
     }
   }, [currentUser, isCompletingPostStripeSignup, showSignupModal]);
 
@@ -219,11 +219,11 @@ function App() {
   const activelyProcessingEmailLink = processingEmailLinkRef.current && isSignInWithEmailLink(auth, window.location.href) && !currentUser;
 
   if ((loadingAuth || activelyProcessingEmailLink) && !showSignupModal && !isCompletingPostStripeSignup) {
-    console.log("App.js: Rendering Loading... div. loadingAuth:", loadingAuth, "activelyProcessingEmailLink:", activelyProcessingEmailLink);
+    // console.log("App.js: Rendering Loading... div. loadingAuth:", loadingAuth, "activelyProcessingEmailLink:", activelyProcessingEmailLink);
     return <div className="flex items-center justify-center h-screen"><div className="text-xl">Loading...</div></div>;
   }
 
-  console.log("App.js: Proceeding to render Router.");
+  // console.log("App.js: Proceeding to render Router.");
   return (
     <Router>
       {authError && <div style={{ color: 'red', padding: '10px', textAlign: 'center', backgroundColor: 'lightpink', borderBottom: '1px solid darkred' }}>Error: {authError}</div>}
