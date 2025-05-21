@@ -119,8 +119,8 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
   // Derived state to control UI elements based on subscription
   const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
 
-  // New derived state: chat is allowed if Home.js says so (via !isChatDisabled) OR if there's an active Stripe subscription/trial
-  const effectiveSubscriptionAllowsChat = !isChatDisabled || isSubscriptionActive;
+  // New derived state: chat is allowed if Home.js says so (via trialMessage) OR if there's an active Stripe subscription/trial
+  const effectiveSubscriptionAllowsChat = (trialMessage !== '') || isSubscriptionActive;
 
   useEffect(() => {
     // Scroll to bottom only if not loading more, or if it is the very first load of a selected conversation
