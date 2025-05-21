@@ -119,6 +119,9 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
   // Derived state to control UI elements based on subscription
   const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
 
+  // New derived state: chat is allowed if Home.js says so (via !isChatDisabled) OR if there's an active Stripe subscription/trial
+  const effectiveSubscriptionAllowsChat = !isChatDisabled || isSubscriptionActive;
+
   useEffect(() => {
     // Scroll to bottom only if not loading more, or if it is the very first load of a selected conversation
     if (messagesEndRef.current && (!currentMessagesPagination.nextPageAfter || messages.length <= 20)) {
@@ -488,8 +491,8 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
 
   // Voice input functions
   const startRecording = async () => {
-    if (!currentUser || !isSubscriptionActive) {
-      setError("Please log in and ensure your subscription is active to use voice input.");
+    if (!currentUser || !effectiveSubscriptionAllowsChat) { // MODIFIED HERE
+      setError("Voice input requires an active subscription or trial period."); // MODIFIED ERROR MESSAGE
       return;
     }
     try {
@@ -620,6 +623,9 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
     }
   };
 
+  // Log the received 'isChatDisabled' prop and the component's internal 'isLoading' state
+  console.log(`ChatInterface Render: Props: isChatDisabled=${isChatDisabled}. Internal state: isLoading=${isLoading} (actual isLoading variable might differ)`);
+
   return (
     <>
       <div className="flex h-full w-full bg-gray-200 dark:bg-gray-900">
@@ -637,7 +643,7 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
 
             <button
               onClick={handleNewConversation}
-              disabled={!isSubscriptionActive} // Disable if subscription not active
+              disabled={!effectiveSubscriptionAllowsChat} // MODIFIED HERE
               className="w-full flex items-center justify-center px-3 py-2 mt-4 mb-3 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-500 focus:outline-none transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -786,7 +792,7 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                         handleSelectConversation(currentConvo, true);
                       }
                     }}
-                    disabled={!isSubscriptionActive} // Disable if subscription not active
+                    disabled={!effectiveSubscriptionAllowsChat} // MODIFIED HERE
                     className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 shadow-sm transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Load Previous Messages
@@ -854,14 +860,14 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && !isLoading && currentUser) {
+                    if (e.key === 'Enter' && !e.shiftKey && !isLoading && currentUser && effectiveSubscriptionAllowsChat) { // MODIFIED HERE (added effectiveSubscriptionAllowsChat)
                       e.preventDefault();
                       handleSend();
                     }
                   }}
                   placeholder={
                     currentUser
-                      ? isSubscriptionActive
+                      ? effectiveSubscriptionAllowsChat // MODIFIED HERE
                         ? selectedConversationId
                           ? "Reply..."
                           : `Type your message...${isWideScreen ? " (Shift+Enter for new line)" : ""}`
@@ -871,12 +877,12 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                   className="flex-grow px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 shadow-sm disabled:bg-gray-100 dark:disabled:bg-gray-800 bg-white dark:bg-gray-700 dark:text-gray-200 resize-none overflow-y-auto hide-scrollbar"
                   rows="1"
                   style={{ maxHeight: '120px' }}
-                  disabled={isLoading || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing || isRecording}
+                  disabled={isLoading || !currentUser || isSavingConversation || !effectiveSubscriptionAllowsChat || isTranscribing || isRecording} // MODIFIED HERE
                 />
                 <button
                   onClick={handleVoiceInputClick}
                   className={`ml-2 px-1.5 py-2 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none disabled:opacity-50 ${isRecording ? 'text-red-500 hover:text-red-600' : 'text-green-500 hover:text-green-600'}`}
-                  disabled={isLoading || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing}
+                  disabled={isLoading || !currentUser || isSavingConversation || !effectiveSubscriptionAllowsChat || isTranscribing} // MODIFIED HERE
                   title={isRecording ? "Stop recording" : "Start voice input"}
                 >
                   {isRecording ? (
@@ -896,7 +902,7 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                 <button
                   onClick={handleSend}
                   className="bg-blue-500 hover:bg-blue-600 text-white p-2.5 rounded-full disabled:opacity-50 shadow-sm ml-2 flex items-center justify-center" // Changed to rounded-full and p-2.5
-                  disabled={isLoading || !input.trim() || !currentUser || isSavingConversation || !isSubscriptionActive || isTranscribing || isRecording}
+                  disabled={isLoading || !input.trim() || !currentUser || isSavingConversation || !effectiveSubscriptionAllowsChat || isTranscribing || isRecording} // MODIFIED HERE
                 >
                   {isSavingConversation || isLoading || isTranscribing ? (
                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

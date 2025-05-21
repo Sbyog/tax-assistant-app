@@ -95,18 +95,11 @@ function App() {
 
 
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      console.log("App.js: onAuthStateChanged triggered. authUser:", authUser ? authUser.uid : 'null', "Processing email link:", processingEmailLinkRef.current);
-      
-      // If we just processed an email link, signInWithEmailLink's promise resolves *before* onAuthStateChanged fully settles.
-      // The processingEmailLinkRef helps manage the loading state during this period.
-      // Once onAuthStateChanged fires (whether with user or null), we can consider the email link processing attempt concluded for this cycle.
-      if(emailLinkSignInInitiatedThisSession.current) { // If an email link attempt was made in this session
-          processingEmailLinkRef.current = false; // Mark email link processing as no longer active
-      }
+      console.log("App.js: onAuthStateChanged triggered. authUser:", authUser ? authUser.uid : 'null');
 
       if (authUser) {
-        setLoadingAuth(true); // Start loading auth state for backend checks
-        setAuthError(null); // Clear previous errors
+        setLoadingAuth(true);
+        setAuthError(null);
         try {
           const exists = await checkIfUserExists(authUser.uid);
           let appUser;
@@ -120,32 +113,25 @@ function App() {
               photoURL: authUser.photoURL,
             };
             appUser = await createUserInFirestore(firebaseUserForCreation);
-            if (!appUser || !appUser.uid) { // Ensure backend returned a valid user object
+            console.log("App.js: Data received from createUserInFirestore:", JSON.stringify(appUser));
+            if (!appUser || !appUser.uid) {
                 throw new Error("User creation in backend failed or returned invalid data.");
             }
-            setIsNewUser(true); // Set isNewUser state
-            console.log("App.js: New user created and data fetched:", appUser);
+            setIsNewUser(true);
+            console.log("App.js: New user processed. AppUser:", JSON.stringify(appUser));
           } else {
-            setIsNewUser(false); // User exists
+            setIsNewUser(false);
             console.log(`App.js: User ${authUser.uid} exists. Fetching data...`);
             appUser = await getUserData(authUser.uid);
+            console.log("App.js: Data received from getUserData:", JSON.stringify(appUser));
             if (!appUser || !appUser.uid) { // Ensure backend returned a valid user object
                  throw new Error("Failed to fetch data for existing user or data was invalid.");
             }
-            console.log("App.js: Existing user data fetched:", appUser);
+            console.log("App.js: Existing user data processed. AppUser:", JSON.stringify(appUser));
           }
           
-          setCurrentUser(appUser); // Store the full user object from our backend (includes signUpDate)
-
-          // Logic for SignupModal: If it's a new user and their display name is not set,
-          // you might want to show a modal to collect it.
-          // This depends on whether SignupModal is repurposed for name collection
-          // instead of Stripe. For now, this is commented out as SignupModal leads to Stripe.
-          // if (isNewUser && appUser && !appUser.displayName) {
-          //   console.log("App.js: New user without display name, potentially show modal to collect name.");
-          //   setPendingSignupDetails(appUser); // Pass the backend user object
-          //   setShowSignupModal(true);
-          // }
+          console.log("App.js: Attempting to set currentUser with AppUser:", JSON.stringify(appUser));
+          setCurrentUser(appUser);
 
         } catch (error) {
           console.error("App.js: Error in onAuthStateChanged user processing:", error);

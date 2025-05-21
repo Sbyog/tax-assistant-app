@@ -131,16 +131,34 @@ export const getUserData = async (userId) => {
     });
 
     if (response.status === 404) {
+      console.log(`getUserData: User ${userId} not found (404).`);
       return null; // User not found
     }
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: response.statusText }));
-      console.warn(`Warning getting user data via API: ${response.status}`, errorData.message);
+      console.warn(`Warning getting user data via API for ${userId}: ${response.status}`, errorData.message);
       return null; 
     }
-    return await response.json();
+    const responseData = await response.json();
+    console.log(`getUserData: Raw response for ${userId}:`, responseData);
+
+    // Check if the actual user data is nested under a 'user' property
+    if (responseData && responseData.user && typeof responseData.user === 'object') {
+      console.log(`getUserData: Returning nested user object for ${userId}:`, responseData.user);
+      return responseData.user;
+    } 
+    // Check if the data is directly the user object (and has a uid)
+    else if (responseData && responseData.uid) {
+      console.log(`getUserData: Returning direct response object as user data for ${userId}:`, responseData);
+      return responseData;
+    }
+    // If the structure is unexpected (e.g., not an object, or missing uid after potential unnesting)
+    else {
+      console.warn(`getUserData: Response for ${userId} is not in the expected format or lacks uid. Data:`, responseData);
+      return null; // Or handle as an error, depending on strictness required
+    }
   } catch (error) {
-    console.error('Error getting user data via API:', error);
+    console.error(`Error getting user data via API for ${userId}:`, error);
     return null; 
   }
 };
