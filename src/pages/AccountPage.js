@@ -6,37 +6,80 @@ import { openCustomerPortal, checkSubscriptionStatus, createCheckoutSession } fr
 
 const AccountPage = ({ user }) => {
   const [userData, setUserData] = useState(null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
-  const [trialEndDate, setTrialEndDate] = useState(null); // Added to store trial end date
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null); // Internal status for color/button logic
+  const [trialEndDate, setTrialEndDate] = useState(null); // Specifically for Stripe trial end date
   const [isLoading, setIsLoading] = useState(false);
   const [isSubscriptionActionLoading, setIsSubscriptionActionLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  // New states for UI display
+  const [displayStatusLabel, setDisplayStatusLabel] = useState('Loading status...');
+  const [displayDaysRemaining, setDisplayDaysRemaining] = useState(null);
+
   useEffect(() => {
     if (user) {
       const fetchData = async () => {
         setIsLoading(true);
+        // setError(''); // Clear previous errors on new fetch
+        // Initialize display states for loading phase handled by isLoading flag in JSX
+        
         try {
           const uData = await getUserData(user.uid);
           setUserData(uData);
-          
-          const subStatus = await checkSubscriptionStatus(user.uid);
-          if (subStatus.success) {
-            setSubscriptionStatus(subStatus.status);
-            if (subStatus.status === 'trialing' && subStatus.trialEndDate) {
-              setTrialEndDate(subStatus.trialEndDate);
-            } else {
-              setTrialEndDate(null);
+
+          const subStatus = await checkSubscriptionStatus(user.uid); // Stripe status
+
+          let newDisplayStatusLabel = ''; 
+          let newDisplayDaysRemaining = null;
+          let internalStatusForStyling = 'error'; // Default for color and button logic
+
+          let appTrialIsActive = false;
+          if (uData && uData.subscriptionStatus === 'new' && uData.signUpDate) {
+            const signUpDateObj = new Date(uData.signUpDate);
+            const trialExpiryDate = new Date(signUpDateObj);
+            trialExpiryDate.setDate(signUpDateObj.getDate() + 7);
+            
+            const appTrialDaysLeft = calculateDaysLeft(trialExpiryDate.toISOString());
+
+            if (appTrialDaysLeft > 0) {
+              newDisplayStatusLabel = '7-day Free Trial';
+              newDisplayDaysRemaining = `(${appTrialDaysLeft} day${appTrialDaysLeft !== 1 ? 's' : ''} left)`;
+              internalStatusForStyling = 'trialing'; // Mimic trialing for green color & button logic
+              setTrialEndDate(null); // App trial overrides Stripe trial display details
+              appTrialIsActive = true;
             }
-          } else {
-            setError(subStatus.error || 'Failed to fetch subscription status.');
-            setSubscriptionStatus('error');
-            setTrialEndDate(null);
           }
+
+          if (!appTrialIsActive) {
+            // App trial not active or not applicable, use Stripe's status
+            if (subStatus.success) {
+              internalStatusForStyling = subStatus.status;
+              if (subStatus.status === 'trialing' && subStatus.trialEndDate) {
+                newDisplayStatusLabel = '14-day free trial'; // Label for Stripe's trial
+                const stripeDaysLeft = calculateDaysLeft(subStatus.trialEndDate);
+                newDisplayDaysRemaining = `(${stripeDaysLeft} day${stripeDaysLeft !== 1 ? 's' : ''} left)`;
+                setTrialEndDate(subStatus.trialEndDate); // Store Stripe's trial end date
+              } else {
+                newDisplayStatusLabel = (subStatus.status || 'N/A').toUpperCase();
+                setTrialEndDate(null); // No active Stripe trial
+              }
+            } else {
+              setError(subStatus.error || 'Failed to fetch subscription status.');
+              newDisplayStatusLabel = 'ERROR';
+              // internalStatusForStyling remains 'error'
+            }
+          }
+          
+          setSubscriptionStatus(internalStatusForStyling);
+          setDisplayStatusLabel(newDisplayStatusLabel);
+          setDisplayDaysRemaining(newDisplayDaysRemaining);
+
         } catch (err) {
           console.error("Error fetching account data:", err);
           setError('Failed to load account details.');
+          setDisplayStatusLabel('ERROR');
+          setDisplayDaysRemaining(null);
           setSubscriptionStatus('error');
           setTrialEndDate(null);
         } finally {
@@ -44,8 +87,17 @@ const AccountPage = ({ user }) => {
         }
       };
       fetchData();
+    } else {
+      // User is not available (e.g., logged out or not yet loaded)
+      setIsLoading(false);
+      setDisplayStatusLabel('N/A');
+      setDisplayDaysRemaining(null);
+      setSubscriptionStatus('none'); 
+      setUserData(null);
+      setTrialEndDate(null);
+      setError('');
     }
-  }, [user]);
+  }, [user]); // calculateDaysLeft is stable and doesn't need to be a dependency
 
   const calculateDaysLeft = (endDate) => {
     if (!endDate) return null;
@@ -103,7 +155,7 @@ const AccountPage = ({ user }) => {
   const handleSignOut = async () => {
     try {
       await auth.signOut();
-      navigate('/login');
+      // navigate('/login'); // Navigation handled by App.js onAuthStateChanged
     } catch (error) {
       console.error("Error signing out: ", error);
       setError("Failed to sign out. Please try again.");
@@ -151,22 +203,20 @@ const AccountPage = ({ user }) => {
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Subscription Status</p>
                   <p className={`text-lg font-semibold ${
-                    isLoading && !subscriptionStatus ? 'text-gray-500 dark:text-gray-400' :
+                    isLoading ? 'text-gray-500 dark:text-gray-400' : // Color for loading state
                     subscriptionStatus === 'active' || subscriptionStatus === 'trialing' ? 'text-green-600 dark:text-green-400' : 
                     'text-red-600 dark:text-red-400'
                   }`}>
-                    {isLoading && !subscriptionStatus ? 'Loading status...' : 
-                      subscriptionStatus === 'trialing' ? '14-day free trial' :
-                      (subscriptionStatus || 'N/A').toUpperCase()}
-                    {subscriptionStatus === 'trialing' && trialEndDate && (
+                    {isLoading ? 'Loading status...' : displayStatusLabel}
+                    {!isLoading && displayDaysRemaining && (
                       <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
-                        ({calculateDaysLeft(trialEndDate)} days left)
+                        {displayDaysRemaining}
                       </span>
                     )}
                   </p>
                 </div>
 
-                {userData.stripeCustomerId && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || subscriptionStatus === 'past_due') && (
+                {userData && userData.stripeCustomerId && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || subscriptionStatus === 'past_due') && (
                   <button
                     onClick={handleManageSubscription}
                     disabled={isSubscriptionActionLoading}
@@ -181,7 +231,7 @@ const AccountPage = ({ user }) => {
                   </button>
                 )}
 
-                {(!subscriptionStatus || subscriptionStatus === 'none' || subscriptionStatus === 'canceled' || subscriptionStatus === 'incomplete' || subscriptionStatus === 'incomplete_expired' || subscriptionStatus === 'error') && !isLoading && (
+                {(!subscriptionStatus || ['none', 'canceled', 'incomplete', 'incomplete_expired', 'error', 'unpaid', 'paused'].includes(subscriptionStatus)) && !isLoading && (
                   <button
                     onClick={handleSubscribeNow}
                     disabled={isSubscriptionActionLoading}
