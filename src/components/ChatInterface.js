@@ -60,7 +60,7 @@ const WelcomeModal = ({ onClose, user }) => {
   );
 };
 
-const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDisabled }) => {
+const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDisabled, trialMessage }) => { // Added trialMessage prop
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -218,10 +218,25 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
   useEffect(() => {
     if (currentUser && currentUser.uid) {
       fetchUserData(currentUser.uid);
+      // checkUserSubscription is called here, which sets subscriptionStatus and trialEndDate
       checkUserSubscription(currentUser.uid);
       fetchConversations();
     }
   }, [currentUser, fetchUserData, checkUserSubscription, fetchConversations]);
+
+  // New state to track if the trial has truly expired (7 days passed for a 'new' user)
+  const [isTrialReallyExpired, setIsTrialReallyExpired] = useState(false);
+
+  useEffect(() => {
+    // This effect determines if the trial has *actually* expired based on Home.js logic
+    // isChatDisabled becomes true when 7 days have passed for a 'new' user.
+    // We also need to ensure this is for a 'new' user as per Home.js logic.
+    if (user && user.subscriptionStatus === 'new' && isChatDisabled) {
+      setIsTrialReallyExpired(true);
+    } else {
+      setIsTrialReallyExpired(false);
+    }
+  }, [user, isChatDisabled]);
 
   const calculateDaysLeft = (endDate) => {
     if (!endDate) return null;
@@ -687,18 +702,29 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
               )}
             </div>
 
+            {/* Display trial message from Home.js if it exists */}
+            {trialMessage && (
+              <div className="my-3 px-1 text-center">
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-normal">
+                  {trialMessage}
+                </p>
+              </div>
+            )}
+
+            {/* Conditional rendering for subscription cards/messages */}
             {subscriptionLoading && subscriptionStatus === 'unknown' ? (
               <div className="text-center my-3">
                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500 dark:border-blue-400 mx-auto mb-1"></div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Loading status...</p>
               </div>
-            ) : (
+            ) : !trialMessage ? ( // Only show these if 7-day app trial message isn't active
               <>
-                {(subscriptionStatus !== 'active' && subscriptionStatus !== 'trialing') && (
+                {isTrialReallyExpired && subscriptionStatus !== 'active' && subscriptionStatus !== 'trialing' ? (
+                  // Card 1: App trial expired for 'new' user, and no active/trialing Stripe sub
                   <div className="my-3 p-3 bg-yellow-100 dark:bg-yellow-700_too_transparent border border-yellow-300 dark:border-yellow-600 rounded-md text-center">
                     <p className="text-sm text-gray-700 dark:text-gray-500 font-medium">Subscription Required</p>
                     <p className="text-xs text-gray-600 dark:text-gray-600 mt-1">
-                      Please subscribe or ensure your subscription is active to use all features.
+                      Your free trial has ended. Please subscribe to continue using the chat.
                     </p>
                     <button
                       onClick={handleSubscribe}
@@ -713,19 +739,41 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                       ) : 'Subscribe Now'}
                     </button>
                   </div>
+                ) : !isTrialReallyExpired && subscriptionStatus !== 'active' && subscriptionStatus !== 'trialing' && subscriptionStatus !== 'unknown' ? (
+                  // Card 2: Not an app trial expiration scenario, but Stripe status is problematic (e.g., inactive, past_due)
+                  <div className="my-3 p-3 bg-yellow-100 dark:bg-yellow-700_too_transparent border border-yellow-300 dark:border-yellow-600 rounded-md text-center">
+                    <p className="text-sm text-gray-700 dark:text-gray-500 font-medium">Subscription Issue</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-600 mt-1">
+                      Please check your subscription status or subscribe to use all features.
+                    </p>
+                    <button
+                      onClick={handleSubscribe}
+                      disabled={subscriptionLoading}
+                      className="mt-2 w-full py-2 px-3 rounded-md text-xs font-medium flex items-center justify-center transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 text-white bg-blue-500 hover:bg-blue-600 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
+                    >
+                      {subscriptionLoading && subscribeError === '' ? (
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : 'Subscribe Now'}
+                    </button>
+                  </div>
+                ) : subscriptionStatus === 'trialing' && trialEndDate ? (
+                  // Card 3: Stripe's own trial is active (and not overridden by other messages)
+                  <div className="my-3 px-1 text-center">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-normal">
+                      {calculateDaysLeft(trialEndDate)} days left in Stripe trial
+                    </p>
+                  </div>
+                ) : null}
+                
+                {/* Common subscribe error message, if any, when subscription cards might be shown */}
+                {subscribeError && (
+                    <p className="text-red-500 dark:text-red-400 text-xs text-center mt-2 mb-2">{subscribeError}</p>
                 )}
-                {subscribeError && <p className="text-red-500 dark:text-red-400 text-xs text-center mb-2">{subscribeError}</p>}
               </>
-            )}
-
-            {/* Display trial days left */} 
-            {subscriptionStatus === 'trialing' && trialEndDate && (
-              <div className="my-3 px-1 text-center">
-                <p className="text-xs text-slate-600 dark:text-slate-400 font-normal">
-                  {calculateDaysLeft(trialEndDate)} days left in free trial
-                </p>
-              </div>
-            )}
+            ) : null} {/* End of !trialMessage block */}
 
             <button
               onClick={handleAccountNavigation}

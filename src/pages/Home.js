@@ -3,7 +3,7 @@ import ChatInterface from '../components/ChatInterface';
 import TutorialModal from '../components/TutorialModal'; // Import the TutorialModal
 import { getUserData, markTutorialAsCompleted } from '../services/userService'; // Import userService functions
 
-const Home = ({ isNewUser, user }) => {
+const Home = ({ user, isNewUser, showWelcomeModal }) => {
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -12,44 +12,45 @@ const Home = ({ isNewUser, user }) => {
   const [trialMessage, setTrialMessage] = useState('');
 
   useEffect(() => {
-    if (user && user.signUpDate && user.subscriptionStatus === 'new') {
-      const signUpDate = new Date(user.signUpDate);
+    console.log("Home.js useEffect: user prop:", user);
+    if (user && user.subscriptionStatus === 'new' && user.signUpDate) {
       const now = new Date();
-      // Calculate difference in days, ensuring we count full days passed.
-      // getTime() returns milliseconds. Difference is in milliseconds.
-      const diffTime = now.getTime() - signUpDate.getTime(); 
-      // Convert milliseconds to days: ms / (1000ms/s * 60s/min * 60min/hr * 24hr/day)
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const signUp = new Date(user.signUpDate);
+      // Calculate difference in days, ignoring time component for day counting
+      const utcNow = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+      const utcSignUp = Date.UTC(signUp.getFullYear(), signUp.getMonth(), signUp.getDate());
+      
+      const diffTime = utcNow - utcSignUp; // Difference in milliseconds
+      const daysSinceSignUp = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-      console.log(`Home.js: User UID: ${user.uid}, Status: ${user.subscriptionStatus}, Signed up on: ${signUpDate.toISOString()}, Days since signup: ${diffDays}`);
+      console.log(`Home.js: Now: ${now.toISOString()}, SignUp: ${signUp.toISOString()}, Days since signup: ${daysSinceSignUp}`);
 
-      if (diffDays >= 7) {
+      if (daysSinceSignUp >= 7) {
         setIsChatDisabled(true);
-        setTrialMessage("Your 7-day free trial has ended. Please subscribe to continue using the chat.");
-        console.log("Home.js: Chat disabled, 7-day trial for 'new' user ended.");
+        // Set trialMessage to empty or a specific expired message if needed by ChatInterface,
+        // but for now, an empty message means it won't be displayed by the logic in ChatInterface.
+        setTrialMessage(''); 
+        console.log("Home.js: Trial expired. isChatDisabled: true");
       } else {
         setIsChatDisabled(false);
-        const daysRemaining = 7 - diffDays;
+        const daysRemaining = 7 - daysSinceSignUp;
         setTrialMessage(`You have ${daysRemaining} day(s) remaining in your free trial.`);
-        console.log(`Home.js: Chat enabled, ${daysRemaining} day(s) remaining in trial for 'new' user.`);
+        console.log(`Home.js: Trial active. Days remaining: ${daysRemaining}. isChatDisabled: false`);
       }
-    } else if (user && user.subscriptionStatus !== 'new') {
-      // If user is not 'new' (e.g., active, canceled), this specific trial logic doesn't apply.
-      // Chat access would be determined by their actual subscription status via Stripe.
-      setIsChatDisabled(false); // Assuming active subscribers or other statuses should have chat enabled.
-      setTrialMessage(''); // No trial message for non-'new' or subscribed users.
-      console.log(`Home.js: User UID: ${user.uid}, Status: ${user.subscriptionStatus}. Standard access, not governed by initial 7-day trial.`);
     } else {
-      // Fallback or if user data is incomplete for this logic
-      setIsChatDisabled(false); // Default to chat enabled if conditions aren't met for disabling
-      setTrialMessage('');
-      if (user) {
-        console.warn(`Home.js: User UID: ${user.uid}. Could not determine trial status accurately. Defaulting to chat enabled. User data:`, user);
-      } else {
-        console.warn("Home.js: User object not available for trial status check.");
+      // Not a 'new' user or signUpDate is missing, so 7-day trial logic doesn't apply to disable chat via this mechanism.
+      // Access will be governed by Stripe status or other rules.
+      setIsChatDisabled(false); 
+      setTrialMessage(''); // No specific trial message from this logic.
+      if (user && user.subscriptionStatus !== 'new') {
+        console.log("Home.js: User is not 'new'. isChatDisabled: false.");
+      } else if (user && !user.signUpDate) {
+        console.log("Home.js: User is 'new' but signUpDate is missing. isChatDisabled: false.");
       }
     }
+  }, [user]);
 
+  useEffect(() => {
     if (isNewUser) {
       setWelcomeMessage(`Welcome ${user?.displayName}! I'm your tax bot and I can help you with your tax questions.`);
     } else {
@@ -105,6 +106,8 @@ const Home = ({ isNewUser, user }) => {
     );
   }
 
+  console.log(`Home.js Render: isChatDisabled=${isChatDisabled}, trialMessage="${trialMessage}"`);
+
   return (
     <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-800">
       <TutorialModal 
@@ -112,12 +115,6 @@ const Home = ({ isNewUser, user }) => {
         onClose={handleTutorialClose} 
         onComplete={handleTutorialComplete} 
       />
-      {trialMessage && (
-        <div className={`p-3 text-center text-white ${isChatDisabled ? 'bg-red-500' : 'bg-blue-500'}`}>
-          {trialMessage}
-          {/* Optionally, add a button/link to subscription page here if isChatDisabled is true */}
-        </div>
-      )}
       <div className="flex-grow w-full flex flex-col">
         <ChatInterface 
           isNewUser={isNewUser} 
@@ -125,6 +122,7 @@ const Home = ({ isNewUser, user }) => {
           welcomeMessage={welcomeMessage}
           showWelcome={showWelcome && !showTutorial} // Hide welcome message if tutorial is showing
           isChatDisabled={isChatDisabled} // Pass the disabled state to ChatInterface
+          trialMessage={trialMessage}     // Pass the trial message string
         />
       </div>
     </div>
