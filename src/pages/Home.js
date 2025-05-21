@@ -9,23 +9,45 @@ const Home = ({ isNewUser, user }) => {
   const [showTutorial, setShowTutorial] = useState(false);
   const [loadingTutorialState, setLoadingTutorialState] = useState(true);
   const [isChatDisabled, setIsChatDisabled] = useState(false);
+  const [trialMessage, setTrialMessage] = useState('');
 
   useEffect(() => {
-    if (user && user.signUpDate) {
+    if (user && user.signUpDate && user.subscriptionStatus === 'new') {
       const signUpDate = new Date(user.signUpDate);
       const now = new Date();
-      const diffTime = Math.abs(now - signUpDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      console.log(`Home.js: User signed up on: ${signUpDate}, Days since signup: ${diffDays}`);
-      if (diffDays > 7) {
+      // Calculate difference in days, ensuring we count full days passed.
+      // getTime() returns milliseconds. Difference is in milliseconds.
+      const diffTime = now.getTime() - signUpDate.getTime(); 
+      // Convert milliseconds to days: ms / (1000ms/s * 60s/min * 60min/hr * 24hr/day)
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      console.log(`Home.js: User UID: ${user.uid}, Status: ${user.subscriptionStatus}, Signed up on: ${signUpDate.toISOString()}, Days since signup: ${diffDays}`);
+
+      if (diffDays >= 7) {
         setIsChatDisabled(true);
-        console.log("Home.js: Chat disabled, trial period ended.");
+        setTrialMessage("Your 7-day free trial has ended. Please subscribe to continue using the chat.");
+        console.log("Home.js: Chat disabled, 7-day trial for 'new' user ended.");
+      } else {
+        setIsChatDisabled(false);
+        const daysRemaining = 7 - diffDays;
+        setTrialMessage(`You have ${daysRemaining} day(s) remaining in your free trial.`);
+        console.log(`Home.js: Chat enabled, ${daysRemaining} day(s) remaining in trial for 'new' user.`);
       }
+    } else if (user && user.subscriptionStatus !== 'new') {
+      // If user is not 'new' (e.g., active, canceled), this specific trial logic doesn't apply.
+      // Chat access would be determined by their actual subscription status via Stripe.
+      setIsChatDisabled(false); // Assuming active subscribers or other statuses should have chat enabled.
+      setTrialMessage(''); // No trial message for non-'new' or subscribed users.
+      console.log(`Home.js: User UID: ${user.uid}, Status: ${user.subscriptionStatus}. Standard access, not governed by initial 7-day trial.`);
     } else {
-      // If signUpDate is not available, default to not disabling chat
-      // This might happen if user object is not fully loaded or for older users without this field
-      console.warn("Home.js: signUpDate not found on user object. Chat will not be disabled by trial logic.");
-      setIsChatDisabled(false);
+      // Fallback or if user data is incomplete for this logic
+      setIsChatDisabled(false); // Default to chat enabled if conditions aren't met for disabling
+      setTrialMessage('');
+      if (user) {
+        console.warn(`Home.js: User UID: ${user.uid}. Could not determine trial status accurately. Defaulting to chat enabled. User data:`, user);
+      } else {
+        console.warn("Home.js: User object not available for trial status check.");
+      }
     }
 
     if (isNewUser) {
@@ -90,10 +112,10 @@ const Home = ({ isNewUser, user }) => {
         onClose={handleTutorialClose} 
         onComplete={handleTutorialComplete} 
       />
-      {isChatDisabled && (
-        <div className="bg-red-500 text-white p-3 text-center">
-          Your 7-day free trial has ended. Please subscribe to continue using the chat.
-          {/* Add a button/link to subscription page here if available */}
+      {trialMessage && (
+        <div className={`p-3 text-center text-white ${isChatDisabled ? 'bg-red-500' : 'bg-blue-500'}`}>
+          {trialMessage}
+          {/* Optionally, add a button/link to subscription page here if isChatDisabled is true */}
         </div>
       )}
       <div className="flex-grow w-full flex flex-col">
