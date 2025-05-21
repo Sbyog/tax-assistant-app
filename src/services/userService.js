@@ -45,7 +45,7 @@ export const checkIfUserExists = async (userId) => {
 /**
  * Create a new user document via API
  * @param {object} user - Firebase Auth user object
- * @returns {Promise<void>}
+ * @returns {Promise<object>} - The created user data from the backend
  */
 export const createUserInFirestore = async (user) => {
   try {
@@ -70,7 +70,9 @@ export const createUserInFirestore = async (user) => {
       throw new Error(errorData.message || `Error creating user via API: ${response.status}`);
     }
     // Assuming 201 Created or similar success status
-    console.log('User created via API:', user.uid);
+    const createdUserData = await response.json();
+    console.log('User created via API:', createdUserData);
+    return createdUserData; // Return the user data from the response
   } catch (error) {
     console.error('Error creating user via API:', error);
     throw error;

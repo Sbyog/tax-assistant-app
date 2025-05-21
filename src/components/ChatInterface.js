@@ -8,7 +8,7 @@ import rehypeRaw from 'rehype-raw'; // Import rehype-raw for HTML support
 import { sendMessage } from '../api/chatApi';
 import { transcribeAudio } from '../api/speechApi'; // Import the new API function
 import { auth } from '../firebase';
-import { getUserData } from '../services/userService';
+import { getUserData, markTutorialAsCompleted } from '../services/userService'; // Import userService functions
 import { createCheckoutSession, checkSubscriptionStatus } from '../services/paymentService';
 import { saveConversation, listConversations, getConversationMessages, deleteConversation } from '../services/historyService';
 
@@ -60,7 +60,7 @@ const WelcomeModal = ({ onClose, user }) => {
   );
 };
 
-const ChatInterface = ({ isNewUser, user }) => {
+const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDisabled }) => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
