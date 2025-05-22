@@ -108,7 +108,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-blue-100 to-sky-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Theme Toggle Button */}
       <div className="absolute top-4 right-4 z-10">
         <button
