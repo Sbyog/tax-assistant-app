@@ -123,10 +123,10 @@ const LoginPage = () => {
               </div>
             </div>
 
-            {/* Disclaimer */}
-            <div className="mt-8 p-4 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
-              <p className="text-sm md:text-base text-blue-100">
-                <strong>Disclaimer:</strong> This chat-based AI assistant provides information about Australian tax laws but does not provide personalized tax advice. 
+            {/* Disclaimer - Styled to be less prominent */}
+            <div className="mt-8 p-3 bg-white/5 backdrop-blur-sm rounded-lg">
+              <p className="text-xs md:text-sm text-blue-100/80 italic">
+                Disclaimer: This chat-based AI assistant provides information about Australian tax laws but does not provide personalized tax advice. 
                 For specific advice related to your situation, please consult a qualified tax professional.
               </p>
             </div>
