@@ -12,14 +12,14 @@ const LoginPage = () => {
   
   const featuresData = [
     {
-      title: "Instant Tax Information",
-      description: "Get immediate answers to complex tax questions based on current Australian tax laws.",
-      icon: "📊"
+      title: "Chat for Instant Answers",
+      description: "Just type your tax questions in a simple chat interface and receive immediate expert responses.",
+      icon: "💬"
     },
     {
-      title: "Tax Rule Clarifications",
-      description: "Understand complicated tax rules with clear explanations in simple terms.",
-      icon: "📝"
+      title: "Conversational Guidance",
+      description: "Have natural conversations about complicated tax rules and get clear, simple explanations.",
+      icon: "🗣️"
     },
     {
       title: "Deduction Insights",
@@ -96,10 +96,10 @@ const LoginPage = () => {
               <h3 className="text-xl md:text-2xl font-bold text-blue-300 dark:text-blue-400">Australian Tax Expert</h3>
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-              Your AI Tax Assistant with <span className="text-yellow-400">Expert Knowledge</span>
+              Chat with Your AI Tax <span className="text-yellow-400">Assistant</span>
             </h1>
             <p className="text-lg md:text-xl text-blue-100 mb-6 max-w-2xl">
-              Access comprehensive information on Australian tax laws, deductions, and obligations - available 24/7 to answer your most complex tax questions.
+              Simply ask questions and get instant answers about Australian tax laws. No complex forms or searches - just chat like you're texting a tax expert, available 24/7.
             </p>
             
             {/* Feature Highlights - Animated */}
@@ -142,7 +142,7 @@ const LoginPage = () => {
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                 </svg>
               </div>
-              <p className="text-blue-100 italic">"Saved me hours of research. Explained a complex tax situation in simple terms!"</p>
+              <p className="text-blue-100 italic">"I just chatted with the bot about my tax questions and got clear answers in seconds. So much easier than searching online!"</p>
               <p className="text-blue-200 font-semibold mt-1">— Sarah T., Small Business Owner</p>
             </div>
           </div>
@@ -153,10 +153,10 @@ const LoginPage = () => {
           <div className="bg-white dark:bg-gray-800 shadow-2xl rounded-2xl p-8 md:p-10 w-full max-w-md backdrop-blur-lg bg-opacity-90 dark:bg-opacity-90 relative z-10 border border-white/10">
             <div className="text-center mb-8">
               <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
-                Get Started Now
+                Start Chatting Now
               </h2>
               <p className="text-gray-600 dark:text-gray-300 mt-2">
-                New users enjoy a free 7-day trial!
+                New users enjoy a free 7-day chat trial!
               </p>
             </div>
 
@@ -242,8 +242,7 @@ const LoginPage = () => {
       
       {/* Disclaimer Footer */}
       <div className="bg-black/30 backdrop-blur-sm text-center p-4 text-sm text-gray-300">
-        <p className="max-w-4xl mx-auto">
-          <strong>Disclaimer:</strong> This AI assistant provides information about Australian tax laws but does not provide personalized tax advice. 
+        <p className="max-w-4xl mx-auto">                <strong>Disclaimer:</strong> This chat-based AI assistant provides information about Australian tax laws but does not provide personalized tax advice. 
           For specific advice related to your situation, please consult a qualified tax professional.
         </p>
       </div>
