@@ -235,6 +235,11 @@ function App() {
             path="/account"
             element={currentUser ? <AccountPage user={currentUser} /> : <Navigate to="/login" replace />}
           />
+          {/* Handle Firebase email link authentication redirects */}
+          <Route 
+            path="/__/auth/action"
+            element={loadingAuth ? <div className="flex items-center justify-center h-screen"><div className="text-xl">Completing authentication...</div></div> : <Navigate to="/" replace />}
+          />
         </Routes>
         {showSignupModal && (
           <SignupModal
