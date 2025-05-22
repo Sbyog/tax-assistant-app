@@ -699,7 +699,7 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
               New Chat
             </button>
 
-            <div className="flex-grow overflow-y-auto mb-4 space-y-2 pr-1 custom-scrollbar">
+            <div className="flex-grow overflow-y-auto mb-4 space-y-1.5 pr-1 custom-scrollbar">
               {historyLoading && !conversations.length ? (
                 <div className="text-center py-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 dark:border-blue-400 mx-auto mb-3"></div>
@@ -727,15 +727,15 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                   <div
                     key={convo.id}
                     onClick={() => handleSelectConversation(convo)}
-                    className={`group relative p-3 rounded-lg cursor-pointer text-sm border transition-all duration-200 ${
+                    className={`group relative py-2 px-3 rounded-lg cursor-pointer text-sm border transition-all duration-200 ${
                       selectedConversationId === convo.id 
                         ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800/30 shadow-sm' 
                         : 'hover:bg-gray-50 border-transparent dark:hover:bg-gray-700/50'
                     }`}
                     title={convo.title}
                   >
-                    <div className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 mr-2 ${
+                    <div className="flex items-center pr-5">
+                      <svg xmlns="http://www.w3.org/2000/svg" className={`h-3.5 w-3.5 mr-1.5 flex-shrink-0 ${
                         selectedConversationId === convo.id 
                           ? 'text-blue-500 dark:text-blue-400' 
                           : 'text-gray-400 dark:text-gray-500'
@@ -752,10 +752,10 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                     </div>
                     <button
                       onClick={(e) => handleDeleteConversation(convo.id, e)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                       aria-label="Delete conversation"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
@@ -1024,7 +1024,7 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
               </p>
             )}
             <div className="max-w-3xl mx-auto w-full">
-              <div className="flex items-end space-x-2">
+              <div className="flex items-center space-x-2">
                 <div className="relative flex-grow">
                   <textarea
                     value={input}
@@ -1052,7 +1052,7 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                 </div>
                 <button
                   onClick={handleVoiceInputClick}
-                  className={`p-3 flex items-center justify-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${
+                  className={`h-12 w-12 flex items-center justify-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${
                     isRecording 
                       ? 'text-white bg-red-500 hover:bg-red-600 focus:ring-red-500' 
                       : 'text-white bg-green-500 hover:bg-green-600 focus:ring-green-500'
@@ -1066,17 +1066,15 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                       <path fillRule="evenodd" d="M5 5h10v10H5V5z" clipRule="evenodd" />
                     </svg>
                   ) : (
-                    // Microphone Icon
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4z" />
-                      <path fillRule="evenodd" d="M5.5 8.5A.5.5 0 016 8h8a.5.5 0 010-1.5H6a.5.5 0 01-.5-.5z" clipRule="evenodd" />
-                      <path fillRule="evenodd" d="M10 18a7 7 0 007-7h-1.558a5.5 5.5 0 01-10.884 0H3a7 7 0 007 7z" clipRule="evenodd" />
+                    // Modern Microphone Icon
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
                   )}
                 </button>
                 <button
                   onClick={handleSend}
-                  className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-full disabled:opacity-50 shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center"
+                  className="h-12 w-12 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-full disabled:opacity-50 shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center"
                   disabled={isLoading || !input.trim() || !currentUser || isSavingConversation || !effectiveSubscriptionAllowsChat || isTranscribing || isRecording}
                 >
                   {isSavingConversation || isLoading || isTranscribing ? (
