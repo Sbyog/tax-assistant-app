@@ -9,6 +9,13 @@ const LoginPage = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [featureIndex, setFeatureIndex] = useState(0);
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const localTheme = window.localStorage.getItem('theme');
+      return localTheme || 'light';
+    }
+    return 'light';
+  });
   
   const featuresData = [
     {
@@ -35,6 +42,22 @@ const LoginPage = () => {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+  
+  // Handle theme changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      window.localStorage.setItem('theme', theme);
+    }
+  }, [theme]);
+  
+  const toggleTheme = () => {
+    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -85,7 +108,26 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Theme Toggle Button */}
+      <div className="absolute top-4 right-4 z-10">
+        <button
+          onClick={toggleTheme}
+          aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          className="p-2 rounded-full bg-gray-200/80 dark:bg-gray-800/40 backdrop-blur-sm hover:bg-gray-300/90 dark:hover:bg-gray-700/50 transition-colors duration-200 shadow-lg border border-gray-300/50 dark:border-gray-700/50"
+        >
+          {theme === 'light' ? (
+            <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor' className='w-6 h-6 text-gray-700'>
+              <path fillRule='evenodd' d='M7.455 2.004a.75.75 0 01.26.77 7 7 0 009.958 7.967.75.75 0 011.067.853A8.5 8.5 0 116.647 1.516a.75.75 0 01.808.488z' clipRule='evenodd' />
+            </svg>
+          ) : (
+            <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor' className='w-6 h-6 text-yellow-300'>
+              <path d='M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 14.596a.75.75 0 101.06-1.06l1.06 1.06a.75.75 0 00-1.06 1.06l-1.06-1.06zM5.404 5.404a.75.75 0 101.06-1.06l1.06 1.06a.75.75 0 00-1.06 1.06l-1.06-1.06z' />
+            </svg>
+          )}
+        </button>
+      </div>
+
       {/* Hero Section */}
       <div className="flex-grow flex flex-col md:flex-row w-full">
         {/* Left side - Content */}
@@ -93,29 +135,29 @@ const LoginPage = () => {
           <div className="animate-fadeIn">
             <div className="flex items-center mb-3">
               <span className="text-3xl md:text-4xl mr-2">🇦🇺</span>
-              <h3 className="text-xl md:text-2xl font-bold text-blue-300 dark:text-blue-400">Australian Tax Expert</h3>
+              <h3 className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">Australian Tax Expert</h3>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-              Chat with Your AI Tax <span className="text-yellow-400">Assistant</span>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 dark:text-white mb-4 leading-tight">
+              Chat with Your AI Tax <span className="text-blue-600 dark:text-yellow-400">Assistant</span>
             </h1>
-            <p className="text-lg md:text-xl text-blue-100 mb-6 max-w-2xl">
+            <p className="text-lg md:text-xl text-gray-700 dark:text-blue-100 mb-6 max-w-2xl">
               Simply ask questions and get instant answers about Australian tax laws. No complex forms or searches - just chat like you're texting a tax expert, available 24/7.
             </p>
             
             {/* Feature Highlights - Animated */}
-            <div className="mb-8 bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
+            <div className="mb-8 bg-white/80 dark:bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-gray-300 dark:border-white/20 shadow-md">
               <div className="transition-all duration-500 ease-in-out" key={featureIndex}>
                 <div className="flex items-center mb-3">
                   <span className="text-2xl md:text-3xl mr-2 md:mr-3">{featuresData[featureIndex].icon}</span>
-                  <h4 className="text-lg md:text-xl font-bold text-white">{featuresData[featureIndex].title}</h4>
+                  <h4 className="text-lg md:text-xl font-bold text-gray-800 dark:text-white">{featuresData[featureIndex].title}</h4>
                 </div>
-                <p className="text-sm md:text-base text-blue-100 pl-8 md:pl-12">{featuresData[featureIndex].description}</p>
+                <p className="text-sm md:text-base text-gray-600 dark:text-blue-100 pl-8 md:pl-12">{featuresData[featureIndex].description}</p>
               </div>
               <div className="flex justify-center mt-4">
                 {featuresData.map((_, idx) => (
                   <button 
                     key={idx}
-                    className={`h-2 w-2 rounded-full mx-1 ${idx === featureIndex ? 'bg-blue-400' : 'bg-white/30'}`} 
+                    className={`h-2 w-2 rounded-full mx-1 ${idx === featureIndex ? 'bg-blue-500 dark:bg-blue-400' : 'bg-gray-300 dark:bg-white/30'}`} 
                     onClick={() => setFeatureIndex(idx)}
                     aria-label={`View feature ${idx + 1}`}
                   />
@@ -124,8 +166,8 @@ const LoginPage = () => {
             </div>
 
             {/* Disclaimer - Styled to be less prominent */}
-            <div className="mt-8 p-3 bg-white/5 backdrop-blur-sm rounded-lg">
-              <p className="text-xs md:text-sm text-blue-100/80 italic">
+            <div className="mt-8 p-3 bg-gray-200/50 dark:bg-white/5 backdrop-blur-sm rounded-lg">
+              <p className="text-xs md:text-sm text-gray-600 dark:text-blue-100/80 italic">
                 Disclaimer: This chat-based AI assistant provides information about Australian tax laws but does not provide personalized tax advice. 
                 For specific advice related to your situation, please consult a qualified tax professional.
               </p>
@@ -226,10 +268,10 @@ const LoginPage = () => {
       </div>
       
       {/* Footer */}
-      <div className="bg-black/30 backdrop-blur-sm text-center p-4 text-sm text-gray-300">
+      <div className="bg-gray-700/70 dark:bg-black/30 backdrop-blur-sm text-center p-4 text-sm">
         <div className="max-w-4xl mx-auto">
           <div className="mb-2">
-            <a href="https://cloudnext.dev" target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:text-blue-200 inline-flex items-center">
+            <a href="https://cloudnext.dev" target="_blank" rel="noopener noreferrer" className="text-white hover:text-blue-200 inline-flex items-center font-medium">
               Powered by CloudNext
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -237,8 +279,8 @@ const LoginPage = () => {
             </a>
           </div>
           <div className="flex justify-center space-x-4 text-xs mt-2">
-            <a href="/terms" className="text-gray-400 hover:text-gray-200">Terms of Use</a>
-            <a href="/privacy" className="text-gray-400 hover:text-gray-200">Privacy Policy</a>
+            <a href="/terms" className="text-white hover:text-blue-200 font-medium">Terms of Use</a>
+            <a href="/privacy" className="text-white hover:text-blue-200 font-medium">Privacy Policy</a>
           </div>
         </div>
       </div>
