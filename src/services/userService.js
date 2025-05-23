@@ -32,6 +32,7 @@ export const checkIfUserExists = async (userId) => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: response.statusText }));
+      console.error('Error checking user existence via API:', errorData);
       throw new Error(errorData.message || `Error checking user existence: ${response.status}`);
     }
     const data = await response.json();

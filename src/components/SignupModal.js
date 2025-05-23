@@ -73,11 +73,14 @@ const SignupModal = ({ user, onCancel, setPendingSignupDetails }) => {
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6 text-center">Complete Your Sign Up</h2>
         
         {user?.photoURL && (
-          <img 
-            src={user.photoURL} 
-            alt="Profile" 
-            className="h-20 w-20 rounded-full mx-auto mb-4 border-2 border-blue-400"
-          />
+          <div className="mb-4">
+            <img 
+              src={user.photoURL} 
+              alt="Profile" 
+              className="h-20 w-20 rounded-full mx-auto border-2 border-blue-400"
+              onError={(e) => e.target.parentElement.style.display = 'none'}
+            />
+          </div>
         )}
         <p className="text-center text-gray-600 dark:text-gray-300 mb-1">
           Welcome, {user?.email}!
