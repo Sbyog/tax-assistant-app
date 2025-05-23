@@ -842,7 +842,7 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                   <div className="my-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 text-center">
                     <div className="flex items-center justify-center space-x-1 text-blue-600 dark:text-blue-400">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 110 2H6z" clipRule="evenodd" />
                       </svg>
                       <span className="text-sm font-medium">{calculateDaysLeft(trialEndDate)} days left in trial</span>
                     </div>
@@ -927,6 +927,30 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
           
           <div ref={chatLogRef} className="absolute top-[60px] bottom-[80px] left-0 right-0 overflow-y-auto p-4 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 scroll-smooth custom-scrollbar">
             <div className="w-full max-w-3xl mx-auto flex flex-col space-y-4">
+              {messages.length === 0 && !isLoading && currentUser && effectiveSubscriptionAllowsChat && !selectedConversationId && (
+                <div className="flex flex-col items-center justify-center space-y-6 px-4 py-12 text-center">
+                  <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-2">
+                    <span role="img" aria-label="waving hand" className="text-3xl">👋</span>
+                  </div>
+                  <div className="space-y-4 max-w-lg">
+                    <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                      G'day! I'm Your MATE - ready to help with your tax questions
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Ask me anything about Australian taxes - from personal returns to business deductions, 
+                      CGT to superannuation. I'm here to make taxes less taxing!
+                    </p>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Try asking about:</p>
+                      <ul className="text-sm text-gray-500 dark:text-gray-400 space-y-2">
+                        <li>• "What expenses can I claim while working from home?"</li>
+                        <li>• "How do I calculate capital gains tax?"</li>
+                        <li>• "When do I need to lodge my tax return?"</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* Button to load more messages */} 
               {selectedConversationId && currentMessagesPagination.hasMore && !isLoading && (
                 <div className="flex justify-center my-3">
