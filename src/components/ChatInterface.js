@@ -979,7 +979,9 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                     }`}
                   >
                     {msg.sender === 'bot' && typeof msg.text === 'string' ? (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{msg.text}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                        {msg.text.replace(/【[^】]*】/g, '')}
+                      </ReactMarkdown>
                     ) : typeof msg.text === 'string' ? (
                       msg.text.split('\n').map((line, i) => (
                         <span key={i}>{line}{i !== msg.text.split('\n').length -1 && <br/>}</span>
