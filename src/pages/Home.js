@@ -52,7 +52,7 @@ const Home = ({ user, isNewUser, showWelcomeModal }) => {
 
   useEffect(() => {
     if (isNewUser) {
-      setWelcomeMessage(`Welcome ${user?.displayName}! I'm your tax bot and I can help you with your tax questions.`);
+      setWelcomeMessage(`Welcome ${user?.displayName}! I'm Your MATE - your Mobile Australian Tax Expert - and I can help you with your tax questions.`);
     } else {
       setWelcomeMessage(`Welcome back, ${user?.displayName || 'boss'}!`);
     }

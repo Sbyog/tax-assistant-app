@@ -129,17 +129,20 @@ const LoginPage = () => {
       </div>
 
       {/* Hero Section */}
-      <div className="flex-grow flex flex-col md:flex-row w-full">
+      <div className="flex-grow flex flex-col md:flex-row w-full justify-center">
         {/* Left side - Content */}
-        <div className="w-full md:w-3/5 p-6 md:p-10 lg:p-16 flex flex-col justify-center">
+        <div className="w-full md:w-3/5 p-6 md:p-10 lg:p-16 flex flex-col justify-center max-w-[900px] md:items-center">
           <div className="animate-fadeIn">
             <div className="flex items-center mb-3">
               <span className="text-3xl md:text-4xl mr-2">🇦🇺</span>
-              <h3 className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">Australian Tax Expert</h3>
+              <h3 className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">Your Mobile Australian Tax Expert</h3>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 dark:text-white mb-4 leading-tight">
-              Chat with Your AI Tax <span className="text-blue-600 dark:text-yellow-400">Assistant</span>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 dark:text-white mb-2 leading-tight">
+              Your <span className="text-blue-600 dark:text-yellow-400">MATE</span>
             </h1>
+            <h2 className="text-2xl md:text-3xl text-gray-700 dark:text-gray-300 mb-4 font-medium">
+              AI-Powered Tax Assistance
+            </h2>
             <p className="text-lg md:text-xl text-gray-700 dark:text-blue-100 mb-6 max-w-2xl">
               Simply ask questions and get instant answers about Australian tax laws. No complex forms or searches - just chat like you're texting a tax expert, available 24/7.
             </p>
@@ -184,6 +187,9 @@ const LoginPage = () => {
               </h2>
               <p className="text-gray-600 dark:text-gray-300 mt-2">
                 New users enjoy a free 7-day chat trial!
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                No credit card required
               </p>
             </div>
 
@@ -278,10 +284,10 @@ const LoginPage = () => {
               </svg>
             </a>
           </div>
-          <div className="flex justify-center space-x-4 text-xs mt-2">
+          {/* <div className="flex justify-center space-x-4 text-xs mt-2">
             <a href="/terms" className="text-white hover:text-blue-200 font-medium">Terms of Use</a>
             <a href="/privacy" className="text-white hover:text-blue-200 font-medium">Privacy Policy</a>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
