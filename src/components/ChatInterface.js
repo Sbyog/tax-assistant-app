@@ -438,6 +438,11 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
     setSelectedConversationId(null);
     setInput('');
     setError(null);
+    
+    // Auto-close panel on mobile after starting new chat
+    if (window.innerWidth < 768) {
+      setIsPanelOpen(false);
+    }
   };
 
   const handleSelectConversation = async (conversation, loadMore = false) => {
@@ -511,6 +516,11 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
       if (!loadMore) setMessages([]); 
     } finally {
       setIsLoading(false);
+      
+      // Auto-close panel on mobile after selecting conversation (only when not loading more)
+      if (!loadMore && window.innerWidth < 768) {
+        setIsPanelOpen(false);
+      }
     }
   };
 
