@@ -675,7 +675,7 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
 
   return (
     <>
-      <div className="flex h-full w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 p-3">
+      <div className="flex h-full w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 p-0 md:p-3">
         {currentUser && isPanelOpen && (
           <div className="w-72 bg-white text-gray-800 dark:bg-gray-800 dark:text-gray-200 p-5 flex flex-col rounded-l-lg shadow-lg border-r border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-center mb-2">
