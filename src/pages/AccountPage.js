@@ -232,7 +232,7 @@ const AccountPage = ({ user }) => {
                 )}
 
                 {/* Show upgrade option for users on the 7-day free trial who don't have an active Stripe subscription */}
-                {/* {userData && userData.subscriptionStatus === 'new' && !isLoading && 
+                {userData && userData.subscriptionStatus === 'new' && !isLoading && 
                   displayStatusLabel === '7-day Free Trial' && 
                   !userData.stripeCustomerId && 
                   !['active', 'trialing', 'past_due'].includes(subscriptionStatus) && (
@@ -253,7 +253,7 @@ const AccountPage = ({ user }) => {
                       ) : 'Upgrade to Paid Plan'}
                     </button>
                   </div>
-                )} */}
+                )}
 
                 {(!subscriptionStatus || ['none', 'canceled', 'incomplete', 'incomplete_expired', 'error', 'unpaid', 'paused'].includes(subscriptionStatus)) && !isLoading && (
                   <button
