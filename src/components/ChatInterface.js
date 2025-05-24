@@ -424,7 +424,15 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
     });
   };
 
-  const handleNewConversation = () => {
+  const handleNewConversation = (e) => {
+    // Prevent mobile viewport jumping
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    if (e && e.currentTarget && e.currentTarget.blur) {
+      e.currentTarget.blur();
+    }
+    
     setMessages([]);
     setThreadId(null);
     setSelectedConversationId(null);
@@ -692,7 +700,8 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
             <button
               onClick={handleNewConversation}
               disabled={!effectiveSubscriptionAllowsChat}
-              className="w-full flex items-center justify-center px-4 py-3 mt-2 mb-4 text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              className="w-full flex items-center justify-center px-4 py-3 mt-2 mb-4 text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm touch-manipulation"
+              style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -727,13 +736,23 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
                 conversations.map(convo => (
                   <div
                     key={convo.id}
-                    onClick={() => handleSelectConversation(convo)}
-                    className={`group relative py-2 px-3 rounded-lg cursor-pointer text-sm border transition-all duration-200 ${
+                    onClick={(e) => {
+                      // Prevent mobile viewport jumping
+                      if (e && e.preventDefault) {
+                        e.preventDefault();
+                      }
+                      if (e && e.currentTarget && e.currentTarget.blur) {
+                        e.currentTarget.blur();
+                      }
+                      handleSelectConversation(convo);
+                    }}
+                    className={`group relative py-2 px-3 rounded-lg cursor-pointer text-sm border transition-all duration-200 touch-manipulation ${
                       selectedConversationId === convo.id 
                         ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800/30 shadow-sm' 
                         : 'hover:bg-gray-50 border-transparent dark:hover:bg-gray-700/50'
                     }`}
                     title={convo.title}
+                    style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
                   >
                     <div className="flex items-center pr-5">
                       <svg xmlns="http://www.w3.org/2000/svg" className={`h-3.5 w-3.5 mr-1.5 flex-shrink-0 ${
@@ -897,9 +916,19 @@ const ChatInterface = ({ isNewUser, user, welcomeMessage, showWelcome, isChatDis
             <div className="flex items-center flex-1">
               {currentUser && (
                 <button 
-                  onClick={() => setIsPanelOpen(!isPanelOpen)} 
-                  className="mr-3 text-gray-600 hover:text-black dark:text-gray-300 dark:hover:text-white p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-150"
+                  onClick={(e) => {
+                    // Prevent mobile viewport jumping
+                    if (e && e.preventDefault) {
+                      e.preventDefault();
+                    }
+                    if (e && e.currentTarget && e.currentTarget.blur) {
+                      e.currentTarget.blur();
+                    }
+                    setIsPanelOpen(!isPanelOpen);
+                  }} 
+                  className="mr-3 text-gray-600 hover:text-black dark:text-gray-300 dark:hover:text-white p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-150 touch-manipulation"
                   aria-label={isPanelOpen ? "Close history panel" : "Open history panel"}
+                  style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
                 >
                   <HiMenu className="w-5 h-5" />
                 </button>
